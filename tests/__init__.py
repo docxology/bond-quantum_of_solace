@@ -1,1 +1,1 @@
-"""Tests for small code project."""
+"""Tests package for QUANTUM."""

@@ -1,52 +1,33 @@
 #!/usr/bin/env python3
-"""Thin orchestrator: generate and inject manuscript variables.
+"""Hydrate the QUANTUM manuscript ``{{TOKEN}}`` map.
 
-Reads experiment config and analysis outputs, writes
-``output/data/manuscript_variables.json``, and substitutes
-``{{TOKEN}}`` markers in manuscript sections into
-``output/manuscript/`` for PDF rendering.
-
-All computation lives in ``src/manuscript_variables``;
-all injection lives in
-``infrastructure.rendering.manuscript_injection``.
-
-Exit codes:
-    0   variables written and injected successfully
-    1   unexpected error
+Thin orchestrator: writes ``output/data/manuscript_variables.json`` by
+computing ``generate_variables()``. Result-derived tokens always come from the
+real assessment; config tokens come from ``manuscript/config.yaml``.
 """
 
 from __future__ import annotations
 
-import argparse
+import json
 import sys
 from pathlib import Path
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_PROJECT_ROOT))
-sys.path.insert(0, str(_PROJECT_ROOT.parents[2]))
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+if str(PROJECT_ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT / "src"))  # noqa: E402
+
+from quantum_of_solace.manuscript_variables import generate_variables  # noqa: E402
+
+OUT_DATA = PROJECT_ROOT / "output" / "data"
 
 
 def main() -> int:
-    """CLI entry point."""
-    parser = argparse.ArgumentParser(description="Generate manuscript variables for quantum_of_solace")
-    parser.add_argument(
-        "--allow-draft",
-        action="store_true",
-        help="Allow N/A fallbacks when analysis outputs are missing (non-pipeline draft mode)",
-    )
-    args = parser.parse_args()
-
-    from infrastructure.rendering.manuscript_injection import write_resolved_manuscript_tree
-    from src.manuscript_variables import generate_variables, save_variables
-
-    variables = generate_variables(
-        _PROJECT_ROOT,
-        require_analysis_outputs=not args.allow_draft,
-    )
-    out_path = _PROJECT_ROOT / "output" / "data" / "manuscript_variables.json"
-    save_variables(variables, out_path)
-    write_resolved_manuscript_tree(_PROJECT_ROOT, variables)
-    print(str(out_path))
+    variables = generate_variables()
+    OUT_DATA.mkdir(parents=True, exist_ok=True)
+    out_path = OUT_DATA / "manuscript_variables.json"
+    out_path.write_text(json.dumps(variables, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    print(f"Manuscript variables written: {out_path} ({len(variables)} tokens)")
     return 0
 
 

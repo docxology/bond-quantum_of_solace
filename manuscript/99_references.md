@@ -1,10 +1,10 @@
-# References {#sec:references}
+# References
 
-Bibliography lives in [`manuscript/references.bib`](references.bib) and is read by Pandoc during PDF render. The build pipeline invokes Pandoc with `--natbib`, so every `[@key]` citation in the manuscript is rewritten to the appropriate `\cite{}`/`\citep{}`/`\citet{}` LaTeX command and resolved against the bib file.
-
-To validate that `references.bib` is syntactically clean and contains the required fields per entry type:
-
-```bash
-uv run python -m infrastructure.reference.citation.cli validate \
-    projects/working/bond/quantum_of_solace/manuscript/references.bib --strict
-```
+1. E. W. Dijkstra, "A note on two problems in connexion with graphs",
+   *Numerische Mathematik*, 1959.
+2. J. Edmonds and R. M. Karp, "Theoretical improvements in algorithmic
+   efficiency for network flow problems", *Journal of the ACM*, 1972.
+3. A. O. Hirschman, *National Power and the Structure of Foreign Trade*,
+   University of California Press, 1945.
+4. J. N. Sheth, "How multivariate methods may reduce the need for the
+   multivariate approach", *Journal of Marketing Research*, 1968.

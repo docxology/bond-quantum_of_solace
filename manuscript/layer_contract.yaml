@@ -1,5 +1,27 @@
-# Code-centric exemplar: optional monorepo adapters only.
-allow_infrastructure_imports:
-  - src/analysis/_infra.py
-  - src/_runtime.py
-  - src/benchmark_support.py
+# Layer contract for the QUANTUM film package.
+
+layers:
+  domain_core:
+    modules:
+      - "quantum_of_solace/hydrology.py"
+      - "quantum_of_solace/water_cartel.py"
+      - "quantum_of_solace/cartel_graph.py"
+    rules:
+      - "no bond_api imports"
+      - "no infrastructure imports"
+      - "stdlib only"
+      - "deterministic (no random draws, no wall clock)"
+  adapter:
+    modules:
+      - "quantum_of_solace/mission.py"
+      - "quantum_of_solace/analysis.py"
+      - "quantum_of_solace/manuscript_variables.py"
+      - "quantum_of_solace/figures.py"
+    rules:
+      - "may import bond_api (mission.py) and domain_core"
+      - "analysis.py imports only domain_core"
+  scripts:
+    modules:
+      - "scripts/*.py"
+    rules:
+      - "thin orchestrators only; no business logic"

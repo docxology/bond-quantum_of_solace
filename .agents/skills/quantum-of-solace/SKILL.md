@@ -1,53 +1,50 @@
 ---
 name: quantum-of-solace
-description: Code-centric optimization research exemplar — gradient descent, convergence analysis, automated figures, dashboard, and publication-quality PDF.
-version: 0.1.0
-author: docxology
-license: MIT
-tags: [exemplar, code, optimization, thin-orchestrator]
+description: Build and maintain the QUANTUM BOND-suite film package for Quantum of Solace (2008): water-rights cartel, desert hydrology, commodity-cartel graph.
 ---
 
 # quantum-of-solace
 
-Project-scoped skill for the in-repo exemplar at
-`projects/working/bond/quantum_of_solace/`. Load this when working inside the project.
+Film package in PROJECT BOND (codename **QUANTUM**). Models the *Quantum of
+Solace* threat — a shadow cartel's control of water and scarce commodities — as
+three deterministic domain modules bound to the frozen `bond_api` protocol.
 
-## When to Use
+## When to use
 
-- Working inside the `quantum_of_solace` exemplar — running scripts, editing source,
-  or regenerating outputs.
-- Forking this exemplar as the starting scaffold for a new research project.
-- Validating that the exemplar's contracts (thin-orchestrator, layer boundaries,
-  no-mocks testing) still hold after changes.
+- Building or maintaining this package's domain core, mission adapter, scripts,
+  tests, manuscript, or metadata.
+- Verifying the package against the BOND guardrails before a path-scoped commit.
 
-## Quick Reference
+## Quick reference
 
 ```bash
-# From the repository root
-uv run pytest projects/working/bond/quantum_of_solace/tests --cov=projects/working/bond/quantum_of_solace/src --cov-fail-under=90
-uv run python scripts/pipeline/stage_02_analysis.py --project templates/quantum_of_solace
-uv run python scripts/pipeline/stage_03_render.py --project templates/quantum_of_solace
-uv run python scripts/pipeline/stage_04_validate.py --project templates/quantum_of_solace
-uv run python scripts/pipeline/stage_05_copy.py --project templates/quantum_of_solace
+uv sync --extra dev
+uv run python scripts/generate_analysis.py
+uv run python scripts/run_mission.py full
+uv run pytest tests/ --cov=src --cov-fail-under=90
+uv run ruff check src/ scripts/ tests/ && uv run ruff format src/ scripts/ tests/
+uv run mypy src/ scripts/
 ```
+
+## Domain core (stdlib-only, deterministic, no bond_api)
+
+- `src/quantum_of_solace/hydrology.py` — desert water network: aquifers,
+  routes, settlements; mass balance, Dijkstra shortest-effort routing,
+  Edmonds–Karp maximum flow.
+- `src/quantum_of_solace/water_cartel.py` — reservoir simulation and
+  cartel leverage from withholding downstream releases.
+- `src/quantum_of_solace/cartel_graph.py` — multi-resource commodity control:
+  Herfindahl–Hirschman concentration, dominance, diversification.
+
+`analysis.py` is the single deterministic assessment source; `mission.py` binds
+to `bond_api` and registers gadgets.
 
 ## Pitfalls
 
-- **Keep scripts thin.** Business logic belongs in `src/` or shared
-  `infrastructure/`, not in `scripts/`.
-- **No mocks.** All tests must use real data, real files, and real
-  computation.
-- **Outputs are disposable.** Never hand-edit `output/` — regenerate from
-  source and config.
-- **Keep tracked benchmarks deterministic.** Serialize reproducible inputs,
-  objective values, and checks; keep wall-clock timing as a runtime-only
-  diagnostic.
-- **Run from the repo root.** Commands assume the template monorepo root
-  as working directory unless the child `AGENTS.md` states otherwise.
-
-## Cross-refs
-
-- Project contract: [`AGENTS.md`](../../../AGENTS.md)
-- README: [`README.md`](../../../README.md)
-- TODO: [`TODO.md`](../../../TODO.md)
-- Exemplar roster: [`projects/AGENTS.md`](../../../../../AGENTS.md)
+- Keep the three domain modules free of `bond_api`/infrastructure imports.
+- Never hand-author a metric in manuscript prose — hydrate via
+  `manuscript_variables.py` + `manuscript/config.yaml`.
+- After exploratory runs, re-run the canonical scripts so `output/` (git-ignored)
+  returns to a clean, deterministic state.
+- `bond-api` ships without `py.typed`; `pyproject.toml` carries a mypy
+  `ignore_missing_imports` override for it.

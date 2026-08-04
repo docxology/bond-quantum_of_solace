@@ -1,13 +1,6 @@
-# quantum_of_solace/data
+# data/ — vocabularies and claim ledgers for the QUANTUM film package.
 
-Project-maintained **inputs** for the code exemplar (not pipeline outputs).
-
-## Quick reference
-
-| File | Role |
-| --- | --- |
-| `claim_ledger.yaml` | Source-backed numeric and artifact claims for evidence validation |
-
-Generated analysis outputs belong under `output/` during pipeline runs, not here.
-
-Schema and edit protocol: [`AGENTS.md`](AGENTS.md).
+`claim_ledger.yaml` registers the sourced numeric claims (all computed by the
+domain core on fixed instances) plus algorithm attributions, for
+evidence-registry validation. Treat this as validation input, not executable
+configuration.

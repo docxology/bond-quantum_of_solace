@@ -1,25 +1,33 @@
+# Experiment plan for the QUANTUM film assessment (declarative).
+
+mission:
+  film: "Quantum of Solace"
+  codename: "QUANTUM"
+
 conditions:
-  - name: conservative_step
-    role: reference
-    description: "Stable gradient-descent step below the spectral bound."
-  - name: near_optimal_step
-    role: proposed
-    description: "Template-recommended step near the stable convergence region."
-  - name: aggressive_step
-    role: variant
-    description: "Stress condition near or above the stability boundary."
-metrics:
-  primary:
-    name: objective_value
-    direction: minimize
-protocol: "Run the deterministic quadratic optimization sweep with identical initialization, seeds, tolerance, and iteration cap across all declared step-size conditions."
+  hydrology_network: "default_network (3 aquifers, 6 routes, 2 settlements)"
+  reservoir_horizon_periods: 12
+  restriction_frac: 0.5
+  controlled_dams: ["highland_reservoir", "desert_holding"]
+  cartel_model: "default_cartel (quantum, rival_syndicate, state_utility)"
+
+primary_metric:
+  name: "aggregate cartel leverage"
+  source: "quantum_of_solace.analysis.assess_water_cartel"
+
+secondary_metrics:
+  - name: "settlement max-flow delivery"
+    source: "quantum_of_solace.analysis.assess_hydrology"
+  - name: "portfolio-mean HHI"
+    source: "quantum_of_solace.analysis.assess_cartel_graph"
+
 expected_figures:
-  - fig:convergence_plot
-  - fig:performance_benchmark
-  - fig:step_size_sensitivity
+  - output/figures/hydrology_settlement_delivery.png
+  - output/figures/water_cartel_leverage.png
+  - output/figures/cartel_hhi_concentration.png
+
 expected_tables:
-  - tbl:optimization_results
-baselines:
-  - conservative_step
-ablations:
-  - aggressive_step
+  - "per-dam leverage breakdown (water_cartel report)"
+
+baseline: "unrestricted reservoir operation (restriction_frac=0)"
+ablation: "toggle controlled dams to measure marginal leverage"

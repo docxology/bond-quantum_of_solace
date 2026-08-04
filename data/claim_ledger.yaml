@@ -1,57 +1,33 @@
+# Claim ledger: sourced numeric claims for evidence-registry validation.
+# All values are COMPUTED by the real domain algorithms on fixed instances;
+# evidence points at the exact module/function that produces them.
+
 claims:
-  - claim_id: figure-export-dpi
-    kind: number
-    value: 300
-    source: projects/working/bond/quantum_of_solace/src/viz_config.py plotting defaults (dpi)
-    source_tier: project_source
-    freshness: active
-    artifact_path: output/figures/convergence_plot.png
-  - claim_id: step-size-sensitivity-cap
-    kind: number
-    value: 500
-    source: projects/working/bond/quantum_of_solace/src/sweeps.py sensitivity_sweep max_iter cap
-    source_tier: generated_metric
-    freshness: active
-    artifact_path: output/figures/step_size_sensitivity.png
-  - claim_id: stability-log-lower
-    kind: number
-    value: -6
-    source: projects/working/bond/quantum_of_solace/src/figures/scientific_stability.py stability visualization caption
-    source_tier: project_source
-    freshness: active
-    artifact_path: output/figures/stability_analysis.png
-  - claim_id: solution-relative-error-exponent
-    kind: number
-    value: -4
-    source: projects/working/bond/quantum_of_solace/manuscript/03_results.md stated precision threshold
-    source_tier: manuscript_claim
-    freshness: active
-    artifact_path: manuscript/03_results.md
-  - claim_id: stability-log-upper
-    kind: number
-    value: -9
-    source: projects/working/bond/quantum_of_solace/src/figures/scientific_stability.py stability visualization caption
-    source_tier: project_source
-    freshness: active
-    artifact_path: output/figures/stability_analysis.png
-  - claim_id: benchmark-tolerance-exponent
-    kind: number
-    value: -10
-    source: projects/working/bond/quantum_of_solace/scripts/optimization_analysis.py dimensional benchmark tolerance
-    source_tier: project_source
-    freshness: active
-    artifact_path: output/figures/performance_benchmark.png
-  - claim_id: benchmark-min-iterations
-    kind: number
-    value: 219
-    source: projects/working/bond/quantum_of_solace/manuscript/03_results.md benchmark caption
-    source_tier: manuscript_claim
-    freshness: active
-    artifact_path: output/figures/performance_benchmark.png
-  - claim_id: benchmark-max-iterations
-    kind: number
-    value: 238
-    source: projects/working/bond/quantum_of_solace/manuscript/03_results.md benchmark caption
-    source_tier: manuscript_claim
-    freshness: active
-    artifact_path: output/figures/performance_benchmark.png
+  - id: "quantum.hydrology.total_supply"
+    claim: "Total aquifer yield is 80.0 units per period"
+    value: 80.0
+    evidence: "quantum_of_solace.hydrology.default_network; analysis.assess_hydrology"
+    determinism: true
+
+  - id: "quantum.hydrology.border_delivery"
+    claim: "border_town receives 65.0 max delivered units per period"
+    value: 65.0
+    evidence: "quantum_of_solace.hydrology.max_flow (Edmonds-Karp); analysis.assess_hydrology"
+    determinism: true
+
+  - id: "quantum.water_cartel.aggregate_leverage"
+    claim: "Aggregate cartel leverage under a 0.5 restriction over 12 periods"
+    value: 3.0
+    evidence: "quantum_of_solace.water_cartel.cartel_leverage; analysis.assess_water_cartel"
+    determinism: true
+
+  - id: "quantum.cartel_graph.aggregate_hhi"
+    claim: "Portfolio-mean Herfindahl-Hirschman index is 3925 points"
+    value: 3925.0
+    evidence: "quantum_of_solace.cartel_graph.hhi; analysis.assess_cartel_graph"
+    determinism: true
+
+algorithm_attributions:
+  - {algorithm: "Dijkstra shortest path", reference: "Dijkstra 1959", module: "hydrology.shortest_route"}
+  - {algorithm: "Edmonds-Karp maximum flow", reference: "Edmonds & Karp 1972", module: "hydrology.max_flow"}
+  - {algorithm: "Herfindahl-Hirschman index", reference: "Hirschman 1945", module: "cartel_graph.hhi"}

@@ -1,1 +1,1 @@
-"""Thin orchestrator scripts for quantum_of_solace."""
+"""Thin script package for QUANTUM."""

@@ -1,0 +1,177 @@
+"""QUANTUM mission adapter: the film's ``bond_api`` ``MissionProvider``.
+
+This module is the thin adapter between the pure domain core
+(:mod:`quantum_of_solace.hydrology`, :mod:`quantum_of_solace.water_cartel`,
+:mod:`quantum_of_solace.cartel_graph`, :mod:`quantum_of_solace.analysis`) and
+the frozen BOND-API mission protocol. It is discovered by the orchestrator
+under the ``quantum_of_solace`` slug and exposes a ``MissionProvider`` at
+module top level, implementing the five-stage lifecycle:
+
+* ``brief`` — declares the QUANTUM mission: objectives, assets, constraints;
+* ``recon`` — surveys a goal and returns measured findings from the domain core;
+* ``plan`` — the deterministic steps that produce the assessment;
+* ``execute`` — runs the full assessment and returns its provenance;
+* ``debrief`` — summarises the outcome and records lessons learned.
+
+The module also registers its domain gadgets with the :class:`GadgetRegistry`
+so coordinator tooling can look them up by name.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from typing import cast
+
+from bond_api.protocol import (
+    Asset,
+    Constraint,
+    Debrief,
+    Finding,
+    MissionBrief,
+    MissionOutcome,
+    MissionPlan,
+    Provenance,
+    ReconReport,
+    ReconRequest,
+    Step,
+)
+from bond_api.registry import GadgetRegistry
+
+from quantum_of_solace.analysis import (
+    assess_cartel_graph,
+    assess_hydrology,
+    assess_water_cartel,
+    run_quantum_assessment,
+)
+
+__all__ = ["GADGET_REGISTRY", "QUANTUM_CODENAME", "MissionProvider"]
+
+#: The film's mission codename.
+QUANTUM_CODENAME = "QUANTUM"
+#: Package version reported in provenance.
+_PACKAGE_VERSION = "0.1.0"
+#: Deterministic RNG seed (0 = no randomness; this film uses none).
+_SEED = 0
+
+#: The assessment subsystem gadgets the film registers for its slug.
+GADGET_REGISTRY = GadgetRegistry()
+GADGET_REGISTRY.register(
+    "quantum_of_solace",
+    {
+        "hydrology": assess_hydrology,
+        "water_cartel": assess_water_cartel,
+        "cartel_graph": assess_cartel_graph,
+        "full_assessment": run_quantum_assessment,
+    },
+)
+
+
+def _canonical_hash(payload: object) -> str:
+    """Stable sha256 fingerprint of a JSON-serializable payload."""
+    text = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+class MissionProvider:  # noqa: N801 — class name fixed by the discovery contract
+    """Deterministic ``bond_api.MissionProvider`` for the QUANTUM film.
+
+    The provider adapts the pure water/cartel domain models to the frozen
+    protocol. It performs no I/O and makes no random draws; every number in a
+    report comes from running the actual domain algorithms on fixed data.
+    """
+
+    film = "quantum_of_solace"
+
+    def brief(self) -> MissionBrief:
+        """Declare the QUANTUM mission, its objectives, assets and constraints."""
+        return MissionBrief(
+            film=self.film,
+            codename=QUANTUM_CODENAME,
+            objectives=(
+                "assess desert water-network resilience under evaporation",
+                "quantify cartel leverage over water-rights through dam control",
+                "measure multi-resource commodity-control concentration",
+            ),
+            assets=(
+                Asset(kind="model", name="hydrology", payload={"default": "desert_network"}),
+                Asset(kind="model", name="water_cartel", payload={"default": "dam_fleet"}),
+                Asset(kind="model", name="cartel_graph", payload={"default": "commodity_control"}),
+            ),
+            constraints=(
+                Constraint(kind="determinism", detail="no random draws, no external calls, fixed problem data"),
+                Constraint(kind="provenance", detail="outcome carries a canonical input hash and fixed seed"),
+            ),
+        )
+
+    def recon(self, request: ReconRequest) -> ReconReport:
+        """Survey the request and return measured findings from the domain core.
+
+        Each finding's detail carries a number computed by the real domain
+        algorithms on the canonical default instances.
+        """
+        hydrology = assess_hydrology()
+        water = assess_water_cartel()
+        cartel = assess_cartel_graph()
+        delivery = cast("dict[str, float]", hydrology["settlement_delivery"])
+        total_supply = cast("float", hydrology["total_supply"])
+        aggregate_leverage = cast("float", water["aggregate_leverage"])
+        aggregate_hhi = cast("float", cartel["aggregate_hhi"])
+        return ReconReport(
+            findings=(
+                Finding(label="goal", detail=request.goal),
+                Finding(
+                    label="network_supply",
+                    detail=f"total aquifer yield {total_supply:.1f} units/period",
+                ),
+                Finding(
+                    label="settlement_delivery",
+                    detail=f"border_town {delivery['border_town']:.1f}, "
+                    f"valley_compact {delivery['valley_compact']:.1f} max units/period",
+                ),
+                Finding(label="cartel_leverage", detail=f"aggregate {aggregate_leverage:.3f}"),
+                Finding(label="aggregate_hhi", detail=f"{aggregate_hhi:.1f} points"),
+            )
+        )
+
+    def plan(self, brief: MissionBrief) -> MissionPlan:
+        """Plan the deterministic steps that produce the QUANTUM assessment."""
+        return MissionPlan(
+            steps=(
+                Step(name="hydrology", action="assess_hydrology", params={"network": "default"}),
+                Step(name="water_cartel", action="assess_water_cartel", params={"restriction": 0.5}),
+                Step(name="cartel_graph", action="assess_cartel_graph", params={"model": "default"}),
+                Step(name="assemble", action="run_quantum_assessment", params={"objectives": len(brief.objectives)}),
+                Step(name="provenance", action="hash_inputs", params={"seed": _SEED}),
+            )
+        )
+
+    def execute(self, plan: MissionPlan) -> MissionOutcome:
+        """Run the assessment and return a deterministic outcome with provenance."""
+        assessment = run_quantum_assessment()
+        results = {
+            "film": self.film,
+            "codename": QUANTUM_CODENAME,
+            "steps_completed": len(plan.steps),
+            "steps": tuple(step.name for step in plan.steps),
+            "assessment": assessment,
+        }
+        return MissionOutcome(
+            success=True,
+            results=results,
+            provenance=Provenance(
+                package_version=_PACKAGE_VERSION,
+                seed=_SEED,
+                input_hash=_canonical_hash(assessment),
+                wall_time_s=0.0,
+            ),
+        )
+
+    def debrief(self, outcome: MissionOutcome) -> Debrief:
+        """Summarise the mission and record the QUANTUM standing lessons."""
+        lessons = (
+            "evaporation hollows out delivered water — routing must minimise effective loss",
+            "a cartel holding a minority of dams can still squeeze a large share of demand",
+            "multi-resource concentration (HHI) exposes leverage that single-commodity view misses",
+        )
+        return Debrief(outcome=outcome, lessons=lessons)

@@ -1,30 +1,23 @@
 {
+  "title": "Quantum of Solace: QUANTUM — Special-Agent Mission Software",
+  "description": "Water-rights cartel, desert hydrology, and multi-resource commodity-cartel graph mission software for the 2008 film Quantum of Solace, built as a PROJECT BOND suite film package.",
+  "upload_type": "software",
+  "license": "MIT",
   "creators": [
     {
-      "affiliation": "Active Inference Institute",
       "name": "Friedman, Daniel Ari",
-      "orcid": "0000-0001-6232-9096"
+      "orcid": "0000-0001-6232-9096",
+      "affiliation": "Active Inference Institute"
     }
   ],
-  "description": "Source code for Convergence Analysis of Gradient Descent Optimization (2026).",
   "keywords": [
-    "optimization algorithms",
-    "gradient descent",
-    "convergence analysis",
-    "numerical methods",
-    "mathematical programming",
-    "reproducible research",
-    "infrastructure automation"
+    "water-rights cartel",
+    "desert hydrology",
+    "commodity-cartel graph",
+    "herfindahl-hirschman concentration",
+    "maximum flow",
+    "reservoir leverage",
+    "deterministic mission software"
   ],
-  "license": "MIT",
-  "related_identifiers": [
-    {
-      "identifier": "10.5281/zenodo.20417136",
-      "relation": "isVersionOf",
-      "scheme": "doi"
-    }
-  ],
-  "title": "Convergence Analysis of Gradient Descent Optimization",
-  "upload_type": "software",
-  "version": "2.5.2"
+  "access_right": "restricted"
 }

@@ -1,12 +1,5 @@
-# .agents — AGENTS.md
+# .agents/ — QUANTUM
 
-Per-folder technical reference for the project-local agent scaffolding.
-
-| Subdirectory | Purpose |
-| --- | --- |
-| [`skills/`](skills/AGENTS.md) | Project-local skills. Each ships `SKILL.md` with YAML frontmatter. |
-
-## When to update
-
-- A new skill specific to this template lands → add a folder under
-  `skills/<name>/` with `SKILL.md`, `AGENTS.md`, `README.md`.
+Agent-working agreement for the `.agents/` tree. Skills under
+`skills/quantum-of-solace/` document the package's build/maintenance workflow;
+see also the root `AGENTS.md` and `docs/agent_instructions.md`.

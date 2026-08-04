@@ -10,3 +10,6 @@ __pycache__/
 
 # Project-local virtualenvs (root .venv is shared)
 .venv/
+
+# Regenerable analysis artifacts (scripts regenerate these deterministically).
+output/
