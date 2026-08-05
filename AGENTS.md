@@ -14,8 +14,8 @@ only).
 
 | Surface | Rule |
 |---|---|
-| `src/quantum_of_solace/hydrology.py`, `water_cartel.py`, `cartel_graph.py` | Pure, deterministic domain core — **stdlib only**, no `bond_api`, no infrastructure, no RNG, no wall-clock |
-| `src/quantum_of_solace/analysis.py` | Assessment orchestrator; imports the domain core and the mission metadata only |
+| `src/quantum_of_solace/hydrology.py`, `water_cartel.py`, `cartel_graph.py`, `pricing.py`, `resilience.py`, `shapley.py` | Pure, deterministic domain core — **stdlib only**, no `bond_api`, no infrastructure, no RNG, no wall-clock |
+| `src/quantum_of_solace/analysis.py` | Assessment orchestrator; imports the domain core + mission metadata only |
 | `src/quantum_of_solace/mission.py` | Thin `bond_api` adapter; registers gadgets with the `GadgetRegistry` |
 | `src/quantum_of_solace/manuscript_variables.py`, `figures.py` | Hydration / figure generators |
 | `scripts/` | Thin orchestrators (sys.path bootstrap + argv forwarding) |

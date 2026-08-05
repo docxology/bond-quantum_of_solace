@@ -25,19 +25,29 @@ class TestMissionProvider:
         brief = provider.brief()
         assert brief.film == "quantum_of_solace"
         assert brief.codename == QUANTUM_CODENAME
-        assert len(brief.objectives) == 3
-        assert len(brief.assets) == 3
+        assert len(brief.objectives) == 6
+        assert len(brief.assets) == 6
         assert any(c.kind == "determinism" for c in brief.constraints)
 
     def test_recon(self, provider):
         report = provider.recon(ReconRequest(goal="map desert water supply"))
         labels = {finding.label for finding in report.findings}
-        assert {"goal", "network_supply", "settlement_delivery", "cartel_leverage", "aggregate_hhi"} <= labels
+        assert {
+            "goal",
+            "network_supply",
+            "settlement_delivery",
+            "cartel_leverage",
+            "aggregate_hhi",
+            "scarcity_price",
+            "critical_route",
+            "top_power",
+        } <= labels
 
     def test_plan(self, provider):
         plan = provider.plan(provider.brief())
-        assert len(plan.steps) == 5
+        assert len(plan.steps) == 8
         assert plan.steps[0].name == "hydrology"
+        assert {step.name for step in plan.steps} >= {"pricing", "resilience", "shapley"}
 
     def test_execute(self, provider):
         outcome = provider.execute(provider.plan(provider.brief()))
@@ -46,11 +56,14 @@ class TestMissionProvider:
         assert outcome.provenance.seed == 0
         assert outcome.provenance.input_hash
         assert outcome.results["assessment"]["hydrology"]["total_supply"] == 80.0
+        assert "pricing" in outcome.results["assessment"]
+        assert "resilience" in outcome.results["assessment"]
+        assert "shapley" in outcome.results["assessment"]
 
     def test_debrief(self, provider):
         outcome = provider.execute(provider.plan(provider.brief()))
         debrief = provider.debrief(outcome)
-        assert len(debrief.lessons) == 3
+        assert len(debrief.lessons) == 6
         assert debrief.outcome is outcome
 
     def test_run_mission_flow(self, provider):
@@ -64,6 +77,8 @@ class TestGadgetRegistry:
         assert isinstance(GADGET_REGISTRY, GadgetRegistry)
         assert GADGET_REGISTRY.contains("quantum_of_solace", "hydrology")
         assert GADGET_REGISTRY.contains("quantum_of_solace", "full_assessment")
+        for gadget in ("pricing", "resilience", "shapley"):
+            assert GADGET_REGISTRY.contains("quantum_of_solace", gadget)
         assert GADGET_REGISTRY.lookup("quantum_of_solace", "cartel_graph") is not None
 
     def test_registry_not_frozen_after_import(self):

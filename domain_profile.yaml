@@ -20,6 +20,9 @@ artifact_expectations:
   - src/quantum_of_solace/hydrology.py
   - src/quantum_of_solace/water_cartel.py
   - src/quantum_of_solace/cartel_graph.py
+  - src/quantum_of_solace/pricing.py
+  - src/quantum_of_solace/resilience.py
+  - src/quantum_of_solace/shapley.py
   - src/quantum_of_solace/mission.py
   - scripts/run_mission.py
   - manuscript/[0-9]*.md
@@ -29,3 +32,6 @@ benchmark_rubric:
   secondary_metrics:
     - "settlement max-flow delivery"
     - "portfolio-mean HHI concentration"
+    - "scarcity price rise fraction"
+    - "single-cut resilience index"
+    - "leading-actor Shapley share"

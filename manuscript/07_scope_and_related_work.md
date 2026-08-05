@@ -13,10 +13,17 @@ deterministic, and auditable so every claim can be traced to a computed number.
 The algorithms used are classical and well-established:
 
 * **Network flow** — Edmonds–Karp maximum flow is described in Edmonds &
-  Karp (1972); shortest-path routing follows Dijkstra (1959).
+  Karp (1972), building on Ford & Fulkerson (1956); shortest-path routing
+  follows Dijkstra (1959). Minimum cuts follow the max-flow/min-cut theorem.
 * **Market concentration** — the Herfindahl–Hirschman index is a standard
   industrial-organisation concentration measure; the pairwise Version was
   introduced by Sheth (1968).
+* **Prices** — linear-demand monopoly pricing (MR = MC) and deadweight-loss
+  analysis are textbook microeconomics; the underlying scarcity-pricing logic
+  for water is classical.
+* **Cooperative power** — the Shapley value (Shapley 1953), the Banzhaf index
+  (Banzhaf 1965) and the bargaining framing (Nash 1950) are standard
+  cooperative-game-theory power measures.
 * **Reservoir operation** — period mass-balance reservoir simulation is the
   standard textbook formulation of deterministic reservoir rule curves.
 

@@ -174,6 +174,30 @@ class TestShortestRouteSearch:
             net.shortest_route("a", "missing")
 
 
+class TestMinCutMetadata:
+    def test_reachable_equals_source_side(self):
+        net = default_network()
+        solution = net.max_flow("highland_aquifer", "border_town")
+        # the source side of the cut is exactly the highland aquifer
+        assert set(solution.reachable) == {"highland_aquifer", "valley_compact"}
+
+
+class TestNetworkSurgery:
+    def test_without_route(self):
+        net = default_network()
+        assert len(net.without_route("deep_well", "border_town").routes) == 5
+
+    def test_without_routes(self):
+        net = default_network()
+        pruned = net.without_routes({("deep_well", "border_town"), ("oasis_spring", "valley_compact")})
+        assert len(pruned.routes) == 4
+
+    def test_remove_every_route_raises(self):
+        net = HydrologicalNetwork([Aquifer("a", 5.0)], [Route("a", "b", 5.0, 1.0, 0.0)])
+        with pytest.raises(ValueError):
+            net.without_routes({("a", "b")})
+
+
 class TestMaxFlow:
     def test_default_delivery(self):
         net = default_network()

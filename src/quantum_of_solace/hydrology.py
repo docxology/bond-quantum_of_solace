@@ -118,11 +118,17 @@ class ShortestRoute:
 
 @dataclass(frozen=True)
 class FlowSolution:
-    """Result of a maximum-flow computation over the network."""
+    """Result of a maximum-flow computation over the network.
+
+    ``reachable`` is the set of nodes still reachable from the source in the
+    residual graph after the flow is maximal — the source side of the minimum
+    cut (by the max-flow/min-cut theorem).
+    """
 
     total_flow: float
     edge_flows: tuple[tuple[str, str, float], ...]
     augmentations: int
+    reachable: tuple[str, ...] = ()
 
     def flow_on(self, source: str, target: str) -> float:
         """Return the flow sent over a specific edge (0.0 if unused)."""
@@ -373,7 +379,28 @@ class HydrologicalNetwork:
         edge_flows = tuple(
             (src_name, tgt_name, volume) for src_name, tgt_name, volume in edge_flows if volume > MAX_FLOW_DELTA
         )
-        return FlowSolution(total_flow=total, edge_flows=edge_flows, augmentations=augmentations)
+        return FlowSolution(
+            total_flow=total,
+            edge_flows=edge_flows,
+            augmentations=augmentations,
+            reachable=tuple(sorted(seen)),
+        )
+
+    # -- network surgery ---------------------------------------------------
+
+    def without_route(self, source: str, target: str) -> HydrologicalNetwork:
+        """Return a copy of the network with the ``source`` → ``target`` route removed."""
+        return self.without_routes({(source, target)})
+
+    def without_routes(self, excluded: set[tuple[str, str]]) -> HydrologicalNetwork:
+        """Return a copy of the network with every excluded route removed.
+
+        Raises ``ValueError`` when the removal would leave no routes.
+        """
+        remaining = [route for route in self._routes if (route.source, route.target) not in excluded]
+        if not remaining:
+            raise ValueError("cannot remove every route from the network")
+        return HydrologicalNetwork(list(self._aquifers.values()), remaining)
 
 
 def default_network() -> HydrologicalNetwork:

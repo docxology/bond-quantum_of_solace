@@ -11,9 +11,12 @@ mission protocol.
 
 | Module | Concept | Algorithms |
 |---|---|---|
-| `quantum_of_solace/hydrology.py` | Desert water network (sources, routes, settlements, evaporation) | Mass balance, Dijkstra shortest-effort routing, Edmonds–Karp maximum flow |
+| `quantum_of_solace/hydrology.py` | Desert water network (sources, routes, settlements, evaporation) | Mass balance, Dijkstra shortest-effort routing, Edmonds–Karp maximum flow, route removal / min-cut support |
 | `quantum_of_solace/water_cartel.py` | Water-rights cartel: reservoirs serving downstream demand | Period reservoir simulation, withheld-volume leverage, aggregate cartel leverage |
 | `quantum_of_solace/cartel_graph.py` | Multi-resource commodity control | Herfindahl–Hirschman concentration, top-k concentration ratios, dominance, diversification |
+| `quantum_of_solace/pricing.py` | Water scarcity & monopoly economics | Linear inverse demand, market-clearing scarcity price, elasticity, monopoly price/DWL, scarcity rent |
+| `quantum_of_solace/resilience.py` | Aqueduct interdiction & network fragility | Per-route criticality, greedy worst-case interdiction, resilience index, min-cut (max-flow/min-cut theorem) |
+| `quantum_of_solace/shapley.py` | Cooperative power over the commodity portfolio | Exact Shapley value, normalised Banzhaf–Coleman index, power ranking, dominance gap |
 
 Every reported number is computed from the domain modules on fixed instances —
 never hand-authored. `quantum_of_solace/analysis.py` is the single assessment

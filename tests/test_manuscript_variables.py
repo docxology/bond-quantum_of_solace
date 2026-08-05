@@ -50,6 +50,15 @@ class TestGenerateVariables:
         assert variables["RESULT_AGG_HHI"] == "3925.0"
         assert "water" in variables["CARTEL_COMMODITIES"]
 
+    def test_deepened_tokens(self):
+        variables = generate_variables()
+        assert variables["PRICE_RESTRICTED"] > variables["PRICE_BASELINE"]
+        assert "highland_aquifer->border_town" in variables["RESIL_CRITICAL_ROUTE"]
+        assert variables["RESIL_BASELINE"] == "120.0"
+        assert variables["SHAPLEY_TOP_ACTOR"] == "quantum"
+        assert variables["SHAPLEY_TOTAL"] == "7.0"
+        assert variables["PRICE_DWL"] == "4050.0"
+
     def test_assessment_and_now_override(self, tmp_path: Path):
         config_path = _write_config(tmp_path / "config.yaml")
         assessment = run_quantum_assessment()

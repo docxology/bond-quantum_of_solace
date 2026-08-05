@@ -6,11 +6,14 @@ branch exceed 90%.
 
 | File | Covers |
 |---|---|
-| `test_hydrology.py` | mass balance, routing, Edmonds–Karp max flow |
+| `test_hydrology.py` | mass balance, routing, Edmonds–Karp max flow, min-cut metadata, route surgery |
 | `test_water_cartel.py` | reservoir simulation, withholding, leverage |
 | `test_cartel_graph.py` | HHI, concentration, dominance |
-| `test_analysis.py` | the assessment orchestrator |
-| `test_figures.py` | figure generators |
+| `test_pricing.py` | demand curves, elasticity, monopoly pricing, scarcity impact |
+| `test_resilience.py` | interdiction criticality, greedy sequence, resilience index, min-cut theorem |
+| `test_shapley.py` | coalition values, exact Shapley/Banzhaf, power ranking |
+| `test_analysis.py` | the six-subsystem assessment orchestrator |
+| `test_figures.py` | six figure generators, byte-determinism |
 | `test_mission.py` | `bond_api` protocol conformance + gadgets |
 | `test_manuscript_variables.py` | `{{TOKEN}}` hydration |
 | `test_scripts_smoke.py` | CLI subprocess smoke + live token cross-reference |

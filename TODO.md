@@ -6,20 +6,28 @@ top-to-bottom.
 ## Done
 
 - **Pure domain core** (stdlib-only, deterministic, no `bond_api`):
-  - `src/quantum_of_solace/hydrology.py` — desert water network: mass balance,
-    Dijkstra shortest-effort routing, Edmonds–Karp maximum flow.
-  - `src/quantum_of_solace/water_cartel.py` — reservoir simulation,
-    withheld-volume and per-dam leverage, aggregate cartel leverage.
-  - `src/quantum_of_solace/cartel_graph.py` — Herfindahl–Hirschman
-    concentration, top-k ratios, dominance, diversification.
+  - `hydrology.py` — desert water network: mass balance, Dijkstra
+    shortest-effort routing, Edmonds–Karp maximum flow, route removal and
+    min-cut residual reachability.
+  - `water_cartel.py` — reservoir simulation, withheld-volume and per-dam
+    leverage, aggregate cartel leverage.
+  - `cartel_graph.py` — Herfindahl–Hirschman concentration, top-k ratios,
+    dominance, diversification.
+  - `pricing.py` — linear-demand water pricing: clearing scarcity price,
+    elasticity, monopoly price/quantity, deadweight loss, scarcity rent.
+  - `resilience.py` — aqueduct interdiction: per-route criticality, greedy
+    worst-case interdiction, resilience index, minimum cut.
+  - `shapley.py` — exact Shapley value, normalised Banzhaf–Coleman index,
+    power ranking, dominance gap (cooperative game theory).
 - **Assessment + mission**: `analysis.py` (single deterministic source of
-  truth), `mission.py` (`bond_api.MissionProvider`, gadgets registered, full
-  provenance).
-- **Manuscript + figures**: token-hydrated sections (`manuscript/[0-9]*.md`),
-  `manuscript_variables.py`, three canonical figures.
+  truth; now six subsystems), `mission.py` (`bond_api.MissionProvider`,
+  gadgets registered, full provenance).
+- **Manuscript + figures**: token-hydrated sections (42 `{{TOKEN}}`s), six
+  canonical figures (delivery, leverage, HHI, pricing curve, interdiction,
+  Shapley power).
 - **Scripts**: `run_mission.py` (brief/recon/plan/execute/debrief/full),
   `generate_analysis.py`, `z_generate_manuscript_variables.py`.
-- **Tests**: 109 passing, ≥90% line+branch (measured 98.24%), zero mocks.
+- **Tests**: 169 passing, ≥90% line+branch (measured 98.37%), zero mocks.
 - **Gates**: pytest `--cov-fail-under=90`, ruff check+format, mypy — all green.
 
 ## Integration points / declared next steps

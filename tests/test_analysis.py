@@ -5,6 +5,9 @@ import pytest
 from quantum_of_solace.analysis import (
     assess_cartel_graph,
     assess_hydrology,
+    assess_pricing,
+    assess_resilience,
+    assess_shapley,
     assess_water_cartel,
     run_quantum_assessment,
 )
@@ -70,10 +73,53 @@ class TestAssessCartelGraph:
         assert metrics["hhi_by_commodity"]["w"] == pytest.approx(10000.0)
 
 
+class TestAssessPricing:
+    def test_default(self):
+        metrics = assess_pricing()
+        assert metrics["supply_restricted"] < metrics["supply_baseline"]
+        assert metrics["restricted_price"] > metrics["baseline_price"]
+        assert metrics["price_rise_frac"] > 0.0
+        assert metrics["scarcity_rent"] > 0.0
+        assert metrics["monopoly_price"] == pytest.approx(55.0)
+        assert metrics["deadweight_loss"] == pytest.approx(4050.0)
+
+
+class TestAssessResilience:
+    def test_default(self):
+        metrics = assess_resilience()
+        assert metrics["baseline_delivery"] == pytest.approx(120.0)
+        assert metrics["critical_route"] == "highland_aquifer->border_town"
+        assert metrics["critical_loss"] == pytest.approx(30.0)
+        assert metrics["critical_route_count"] == 6
+        assert 0.0 < metrics["resilience_index"] < 1.0
+        assert len(metrics["interdiction_sequence"]) == 3
+
+    def test_provided_network(self):
+        net = HydrologicalNetwork([Aquifer("a", 5.0)], [Route("a", "b", 5.0, 1.0, 0.0)])
+        metrics = assess_resilience(net)
+        assert metrics["baseline_delivery"] == pytest.approx(5.0)
+
+
+class TestAssessShapley:
+    def test_default(self):
+        metrics = assess_shapley()
+        assert metrics["top_actor"] == "quantum"
+        assert metrics["ranking"] == ["quantum", "rival_syndicate", "state_utility"]
+        assert metrics["dominance_gap"] > 0.0
+        assert metrics["grand_coalition_value"] == pytest.approx(7.0)
+
+
 class TestRunQuantumAssessment:
     def test_full(self):
         assessment = run_quantum_assessment()
-        assert set(assessment) == {"hydrology", "water_cartel", "cartel_graph"}
+        assert set(assessment) == {
+            "hydrology",
+            "water_cartel",
+            "cartel_graph",
+            "pricing",
+            "resilience",
+            "shapley",
+        }
         assert assessment["hydrology"]["total_supply"] == 80.0
 
     def test_deterministic(self):

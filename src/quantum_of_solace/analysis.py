@@ -13,7 +13,22 @@ from __future__ import annotations
 
 from quantum_of_solace.cartel_graph import CommodityCartelGraph, default_cartel
 from quantum_of_solace.hydrology import HydrologicalNetwork, default_network
-from quantum_of_solace.water_cartel import Dam, cartel_leverage, default_dams
+from quantum_of_solace.pricing import default_demand, market_outcome, scarcity_impact
+from quantum_of_solace.resilience import (
+    interdiction_sequence,
+    resilience_index,
+    single_route_criticality,
+    total_delivery,
+)
+from quantum_of_solace.shapley import (
+    banzhaf_power,
+    coalition_value,
+    default_weights as shapley_default_weights,
+    dominance_gap,
+    power_ranking,
+    shapley_value,
+)
+from quantum_of_solace.water_cartel import Dam, cartel_leverage, default_dams, run_reservoir
 
 __all__ = [
     "CONTROLLED_DAMS",
@@ -21,6 +36,9 @@ __all__ = [
     "SIMULATION_PERIODS",
     "assess_cartel_graph",
     "assess_hydrology",
+    "assess_pricing",
+    "assess_resilience",
+    "assess_shapley",
     "assess_water_cartel",
     "run_quantum_assessment",
 ]
@@ -93,10 +111,107 @@ def assess_cartel_graph(cartel: CommodityCartelGraph | None = None) -> dict[str,
     }
 
 
+def assess_pricing() -> dict[str, object]:
+    """Headline water-scarcity pricing metrics.
+
+    Baseline vs restricted per-period supply is computed from the real dam
+    fleet (unrestricted vs cartel-restricted reservoir release), so the
+    scarcity price and rent are measured from the water-cartel model, not
+    hand-authored.
+    """
+    fleet = default_dams()
+    baseline = sum(run_reservoir(dam, SIMULATION_PERIODS, 0.0).total_release() for dam in fleet) / SIMULATION_PERIODS
+    restricted = (
+        sum(
+            run_reservoir(
+                dam, SIMULATION_PERIODS, RESTRICTION_FRAC if dam.name in CONTROLLED_DAMS else 0.0
+            ).total_release()
+            for dam in fleet
+        )
+        / SIMULATION_PERIODS
+    )
+    a, b, mc = default_demand()
+    impact = scarcity_impact(baseline, restricted, a, b)
+    outcome = market_outcome(a, b, mc)
+    return {
+        "a": a,
+        "b": b,
+        "marginal_cost": mc,
+        "supply_baseline": baseline,
+        "supply_restricted": restricted,
+        "baseline_price": impact["baseline_price"],
+        "restricted_price": impact["restricted_price"],
+        "price_rise_frac": impact["price_rise_frac"],
+        "scarcity_rent": impact["scarcity_rent"],
+        "elasticity": impact["elasticity"],
+        "monopoly_price": outcome.monopoly_price,
+        "monopoly_quantity": outcome.monopoly_quantity,
+        "deadweight_loss": outcome.deadweight_loss,
+        "consumer_surplus_competitive": outcome.consumer_surplus_competitive,
+        "consumer_surplus_monopoly": outcome.consumer_surplus_monopoly,
+    }
+
+
+def assess_resilience(network: HydrologicalNetwork | None = None) -> dict[str, object]:
+    """Headline aqueduct-interdiction and resilience metrics.
+
+    Ranks the most critical single route, reports the greedy worst-case
+    interdiction sequence, and the mean single-cut resilience index — all
+    computed from the real hydrology network.
+    """
+    net = network if network is not None else default_network()
+    baseline = total_delivery(net)
+    critical = single_route_criticality(net, baseline)
+    most_critical = critical[0]
+    return {
+        "baseline_delivery": baseline,
+        "route_count": len(net.routes),
+        "critical_route": f"{most_critical.source}->{most_critical.target}",
+        "critical_loss": most_critical.loss,
+        "critical_loss_frac": most_critical.loss_fraction,
+        "critical_route_count": sum(1 for entry in critical if entry.delivery_after < baseline - 1e-9),
+        "resilience_index": resilience_index(net),
+        "interdiction_sequence": [
+            {
+                "step": entry.step,
+                "route": f"{entry.source}->{entry.target}",
+                "delivery_after": entry.delivery_after,
+                "step_loss": entry.step_loss,
+                "cumulative_loss": entry.cumulative_loss,
+            }
+            for entry in interdiction_sequence(net, steps=3)
+        ],
+    }
+
+
+def assess_shapley(cartel: CommodityCartelGraph | None = None) -> dict[str, object]:
+    """Headline cooperative power metrics over commodity control.
+
+    Exact Shapley and normalised Banzhaf values over the cartel's multi-resource
+    control graph with the canonical commodity weights.
+    """
+    cg = cartel if cartel is not None else default_cartel()
+    weights = shapley_default_weights()
+    values = shapley_value(cg, weights)
+    ranking = power_ranking(cg, weights)
+    return {
+        "weights": weights,
+        "shapley": values,
+        "banzhaf": banzhaf_power(cg, weights),
+        "ranking": list(ranking),
+        "top_actor": ranking[0],
+        "dominance_gap": dominance_gap(cg, weights),
+        "grand_coalition_value": coalition_value(frozenset(cg.actors), cg, weights),
+    }
+
+
 def run_quantum_assessment() -> dict[str, object]:
-    """Run the full canonical QUANTUM assessment over all three subsystems."""
+    """Run the full canonical QUANTUM assessment over all six subsystems."""
     return {
         "hydrology": assess_hydrology(),
         "water_cartel": assess_water_cartel(),
         "cartel_graph": assess_cartel_graph(),
+        "pricing": assess_pricing(),
+        "resilience": assess_resilience(),
+        "shapley": assess_shapley(),
     }

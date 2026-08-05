@@ -36,9 +36,43 @@ points, ``sum((share * 100)²)``, reported per commodity and aggregated as the
 portfolio mean. Dominance, concentration ratios for the top-k holders, and an
 actor's portfolio diversification complete the picture.
 
+## Water scarcity pricing (`quantum_of_solace/pricing.py`)
+
+On a linear inverse demand curve ``p(q) = a − b·q``, :func:`market_clearing_price`
+is the scarcity price at which a fixed supply is absorbed, and
+:func:`scarcity_impact` prices the cartel's supply cut: the restricted price,
+the price-rise fraction, and the scarcity rent collected on the reduced volume.
+The standard monopoly solution (MR = MC), with :func:`monopoly_price`,
+:func:`monopoly_quantity` and :func:`deadweight_loss`, quantifies the social
+cost of concentrated control. The baseline and restricted supplies in the
+assessment are computed from the *real* dam fleet (unrestricted vs
+cartel-restricted reservoir release), so pricing is measured from the same
+model, not assumed.
+
+## Aqueduct interdiction (`quantum_of_solace/resilience.py`)
+
+Over the hydrology network, :func:`single_route_criticality` ranks every route
+by the delivery lost if it alone is cut (recomputing maximum flow after each
+removal); :func:`interdiction_sequence` drives a greedy worst-case attack that
+repeatedly removes the most critical remaining route; and
+:func:`resilience_index` reports the mean fraction of delivery retained after a
+single cut. :func:`minimum_cut` finds the least-capacity set of routes
+separating supply from a settlement via the residual reachability of the
+Edmonds–Karp solution, whose value equals the maximum flow by the
+max-flow/min-cut theorem.
+
+## Cooperative power (`quantum_of_solace/shapley.py`)
+
+Multi-resource control is cast as a transferable-utility coalition game with a
+diminishing-returns value function ``v(S) = Σ_c w_c·√(Σ_{a∈S} share)`` and
+solved **exactly** by full enumeration: :func:`shapley_value` (efficiency always
+holds: the values sum to the grand-coalition value), :func:`banzhaf_power`
+(normalised continuous Banzhaf–Coleman index), :func:`power_ranking`, and
+:func:`dominance_gap` between the top two actors.
+
 ## The mission adapter
 
-`quantum_of_solace/mission.py` adapts the three models to the frozen `bond_api`
+`quantum_of_solace/mission.py` adapts the six models to the frozen `bond_api`
 protocol: `brief`, `recon`, `plan`, `execute` and `debrief`, with provenance
 carrying a canonical input hash and a fixed seed. The domain modules import
 nothing from `bond_api`, so they remain standalone.

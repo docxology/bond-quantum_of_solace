@@ -25,9 +25,17 @@ expected_figures:
   - output/figures/hydrology_settlement_delivery.png
   - output/figures/water_cartel_leverage.png
   - output/figures/cartel_hhi_concentration.png
+  - output/figures/water_pricing_curve.png
+  - output/figures/resilience_route_criticality.png
+  - output/figures/cartel_shapley_power.png
 
 expected_tables:
   - "per-dam leverage breakdown (water_cartel report)"
+  - "per-route interdiction criticality (resilience_report)"
+  - "per-actor Shapley / Banzhaf power (shapley assessment)"
 
 baseline: "unrestricted reservoir operation (restriction_frac=0)"
-ablation: "toggle controlled dams to measure marginal leverage"
+ablation:
+  - "toggle controlled dams to measure marginal leverage"
+  - "remove the most critical aqueduct and recompute scarcity price"
+  - "drop commodity weights to test Shapley ranking stability"
