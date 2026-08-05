@@ -1,74 +1,282 @@
-# QUANTUM — Quantum of Solace · Remaining Work
+# TODO — quantum_of_solace (QUANTUM)
 
-Open work only. Completed build history lives in the git log, not here — a TODO
-that accumulates a "Done" section stops being a to-do list.
+QUANTUM is the PROJECT BOND package for *Quantum of Solace* (2008): six
+deterministic domain models (desert hydrology, water-rights cartel,
+commodity-cartel graph, scarcity pricing, aqueduct interdiction, cooperative
+power), a composed assessment in `analysis.py`, and a thin frozen-`bond_api`
+`MissionProvider` adapter. Measured on 2026-08-05 with
+`uv run pytest tests/ --cov=src --cov-fail-under=90` (Python 3.14.6,
+pytest 9.1.1): **248 tests, all passing, 100.00% line-and-branch coverage** on
+the ten `src/quantum_of_solace/*.py` modules. `ruff check`, `ruff format
+--check` and `mypy src/ scripts/` (16 files) are all clean. Every one of the
+eight findings in `output/verify/quantum_of_solace.json` was re-checked against
+today's tree and every one is closed; what remains below is the four items the
+remediation pass explicitly could not resolve, plus work found while reading.
 
-Ordered by whether it blocks anything.
+Ordered within each group by how much it blocks.
 
-## Blocked on other packages
+## Open work
 
-- **Fleet discovery, exercised.** This package satisfies the
-  `<slug>.mission.MissionProvider` convention and its own tests assert protocol
-  conformance against `bond_api` directly, but the provider has never been
-  driven by a live `bond-orchestrator` run. Nothing here can close this alone.
-  *Acceptance:* an orchestrator run that discovers `quantum_of_solace`,
-  executes it, and reports the same `input_hash` this package's
-  `scripts/run_mission.py execute` prints.
+### Correctness
 
-- **Suite-wide provenance format.** `mission.py` computes its own canonical
-  SHA-256 over a key-sorted JSON dump of the assessment. If `bond-utilities`
-  standardises a provenance-record helper, this should delegate to it rather
-  than keep a private implementation. *Acceptance:* the outcome's provenance
-  block is byte-identical to the record the shared helper writes. *Do not*
-  start this before confirming the helper exists and its shape is stable —
-  `bond_api`'s protocol is frozen, `bond-utilities` is not.
+**C1 — `controlled_dam_count` is read off a module constant, not off the fleet.**
+`src/quantum_of_solace/analysis.py:130` reports
+`"controlled_dam_count": len(CONTROLLED_DAMS)` — the size of the frozenset
+literal at `analysis.py:56` — while `analysis.py:123-124` correctly counts only
+dams *present in the supplied fleet* (`controlled_in_fleet`) when computing
+`ownership_share`. `assess_water_cartel` accepts a caller-supplied `dams`
+argument, so for any fleet omitting `highland_reservoir` or `desert_holding` the
+two fields disagree: `controlled_dam_count` would still say 2 while
+`ownership_share` correctly reports 1/n or 0. The canonical fleet hides this
+because both happen to equal 2, and the manuscript token
+`CARTEL_CONTROLLED_DAMS` carries the constant-derived field. Carried over
+unresolved from the audit.
+*Done when:* `controlled_dam_count` is derived from `controlled_in_fleet`, and a
+test passes a fleet missing one controlled dam and asserts
+`controlled_dam_count == 1` alongside `ownership_share == 1/len(fleet)` — a test
+that fails against today's code.
+*Command:* `uv run pytest tests/test_analysis.py -k controlled -v`
 
-- **Typed `bond-api`.** `bond-api` ships without a `py.typed` marker, so
-  `pyproject.toml` carries an `ignore_missing_imports` override for
-  `bond_api.*`. Drop the override the moment upstream publishes stubs; until
-  then mypy is structurally blind to the protocol's internals.
+**C2 — the `bond-api` path dependency is a machine-specific absolute path.**
+`pyproject.toml:37` pins
+`bond-api = { path = "/Users/4d/Documents/GitHub/template/projects/working/bond/bond-api" }`.
+Two lines later (`pyproject.toml:39-42`) the file states its own rationale for
+declaring lint settings locally: "so a standalone clone of this package lints
+identically … which a fork would not have." That intent is defeated by a path
+that resolves on exactly one machine. A relative `../bond-api` resolves
+identically in-suite and survives relocation. Honest scope: this is a suite-wide
+convention — `../skyfall/pyproject.toml:35-36` does the same — so changing it
+here alone makes this package diverge from its siblings. Raise it as a suite
+decision, not a unilateral edit.
+*Done when:* either the path is relative and a relocated copy syncs cleanly, or
+the absolute form is recorded in `AGENTS.md` as a deliberate suite convention and
+this item moves to Known limitations.
+*Command:* `cp -R . /tmp/quantum-relocation-probe && cd /tmp/quantum-relocation-probe && rm -rf .venv && uv sync --all-extras`
 
-## Modelling gaps worth closing
+### Verification
 
-These are honest limits of the current models, not defects. Each would need a
-new tested module plus a token and a manuscript paragraph.
+**V1 — `experiment_plan.yaml` declares an ablation programme that nothing runs
+and no test binds.** `experiment_plan.yaml:48-52` states a `baseline`
+("unrestricted reservoir operation (restriction_frac=0)") and three ablations
+("toggle controlled dams to measure marginal leverage", "remove the most
+critical aqueduct and recompute scarcity price", "drop commodity weights to test
+Shapley ranking stability"). `grep -rn "ablation" src/ tests/ scripts/` returns
+nothing: none is implemented, none is reported, and no test reads this file at
+all. The `expected_figures` block (`experiment_plan.yaml:35-42`) lists six PNG
+paths never compared against `figures.ALL_FIGURES`, so a renamed figure would
+leave the plan silently stale. A declarative plan nobody executes is a claim
+with no gate behind it.
+*Done when:* a test parses `experiment_plan.yaml`, asserts `expected_figures`
+matches `figures.ALL_FIGURES` and that each `secondary_metrics` `source`
+resolves to a real callable, with the unimplemented ablations either implemented
+or removed from the plan.
+*Command:* `uv run pytest tests/ -k experiment_plan -v` — collects zero tests
+today; that is the finding.
 
-- **Exact interdiction, not just greedy.** `resilience.interdiction_sequence`
-  is a greedy heuristic. The exact k-arc interdiction optimum (Wood's
-  formulation) is a different problem and can beat greedy. Either implement the
-  exact solver for small k, or measure the greedy gap against brute force over
-  all `C(routes, k)` subsets on the canonical instance — the network is small
-  enough that brute force is tractable and would turn a caveat into a number.
+**V2 — `domain_profile.yaml` review gates are unbound to the gates they
+describe.** `domain_profile.yaml:6-12` asserts `coverage_min_percent: 90`,
+`zero_mocks: true`, `ruff: true`, `mypy: true`. The real floor lives at
+`pyproject.toml:78` (`fail_under = 90`). Nothing checks the two agree, so
+changing one leaves the other advertising a number that is no longer enforced.
+`artifact_expectations` (`domain_profile.yaml:19-29`) is likewise an unchecked
+list of paths.
+*Done when:* a test reads `domain_profile.yaml` and asserts
+`review_gates.coverage_min_percent` equals the `[tool.coverage.report]
+fail_under` value parsed from `pyproject.toml`, and that every
+`artifact_expectations` path exists on disk.
+*Command:* `uv run pytest tests/ -k domain_profile -v`
 
-- **Multi-period cartel dynamics.** The reservoir simulation applies a constant
-  restriction fraction for the whole horizon. A time-varying squeeze — ramping,
-  or releasing to break a coalition — is the more interesting strategic object
-  and is not modelled.
+**V3 — the 100% figure excludes two real surfaces.** `pyproject.toml:69-75` sets
+`source = ["src"]` and omits `*/__init__.py`. So the 50 lines of re-exports in
+`src/quantum_of_solace/__init__.py` are never measured, and `scripts/` is
+outside the source set entirely — `generate_analysis.py`, `run_mission.py` and
+`z_generate_manuscript_variables.py` are exercised only as subprocesses by
+`tests/test_scripts_smoke.py`, so their branches (notably `run_mission.py`'s
+exit-2-on-unknown-phase and exit-1-on-unsuccessful-outcome paths documented in
+`AGENTS.md`) contribute nothing to the reported total. The number is honest for
+what it measures; it is narrower than "the package".
+*Done when:* either `--cov=src --cov=scripts` becomes the gate quoted in
+`AGENTS.md`, `README.md` and `docs/`, with the floor still met; or the current
+scope is stated in one sentence beside the gate so no reader infers script
+coverage from it.
+*Command:* `uv run pytest tests/ --cov=src --cov=scripts --cov-report=term-missing`
 
-- **Demand response.** `pricing.py` clears a fixed linear demand curve against
-  a supply the reservoir model produces, but nothing feeds price back into
-  consumption. There is no dynamic equilibrium, so the scarcity rent is an
-  upper bound on a single period rather than a path.
+**V4 — the provider has never been driven by a live orchestrator.**
+`src/quantum_of_solace/mission.py` satisfies the `<slug>.mission.MissionProvider`
+convention and `tests/test_mission.py` asserts protocol conformance against
+`bond_api` directly, but no `bond-orchestrator` run has ever discovered and
+executed this package. Blocked — nothing inside this directory can close it.
+*Done when:* an orchestrator run discovers `quantum_of_solace`, executes it, and
+reports the same `input_hash` that `scripts/run_mission.py execute` prints
+locally.
+*Command (local half):* `uv run python scripts/run_mission.py execute` — record
+the `input_hash` and compare against the orchestrator's.
 
-- **Shapley scaling.** Both power indices enumerate all `2ⁿ` coalitions. That
-  is exact and fast at the canonical three actors, and it is the right choice
-  there — but it will not survive a graph with a dozen actors. If the cartel
-  graph ever grows, add a sampled estimator *beside* the exact solver with a
-  test that the two agree on the small instance, rather than replacing it.
+### Documentation
 
-## Documentation debt
+**D1 — two docs describe the metric gate as narrower than it is.**
+`docs/agent_instructions.md:66` and `docs/README.md:35` both say the second gate
+"fails on any bare decimal left in the results narrative". Since the audit
+remediation that gate scans **every** numbered manuscript section, not just
+`03_results.md`, and a second gate
+(`test_prose_carries_no_untokenised_quantity_claims`,
+`tests/test_scripts_smoke.py:175-191`) catches word-numeral quantity claims that
+carry no token. The sentences are understated rather than false, which is why
+they survived — but a reader following Rule 6 will under-scope their own checks.
+Carried over unresolved from the audit.
+*Done when:* both sentences name all numbered sections and mention the
+quantity-phrase gate, and the grep below finds nothing.
+*Command:* `grep -rn "results narrative" docs/ || echo "gate description updated"`
 
-- **No rendered PDF.** The manuscript is complete and token-hydrated but has
-  only ever been checked as markdown. It has not been run through the template
-  render pipeline, so figure placement, `@fig:` cross-references and the
-  bibliography are unverified in output form.
+**D2 — the manuscript has never been rendered.** All nine sections
+(`manuscript/00_abstract.md` … `99_references.md`) are complete and
+token-hydrated, and `output/figures/` holds all six PNGs, but the manuscript has
+only ever been checked as markdown. It has not been through the template render
+pipeline, so figure placement, the `@fig:` cross-references and the
+`references.bib` bibliography are unverified in output form. A first render
+routinely leaves `??` cross-references.
+*Done when:* a PDF exists and a visual read of the rendered pages confirms zero
+`??` references, all six figures placed, and a populated bibliography.
+*Command:* render via the template pipeline, then
+`pdftotext <out>.pdf - | grep -c '??'` expecting `0`
 
-## Verification reminders
+### Extension
+
+Genuine future work. None of these is a defect; each needs a new tested function,
+a token, and a manuscript paragraph.
+
+**E1 — measure the greedy interdiction gap instead of caveating it.**
+`resilience.interdiction_sequence`
+(`src/quantum_of_solace/resilience.py:112-152`) is a greedy heuristic; the exact
+k-arc interdiction optimum (Wood's formulation) is a different problem and can
+beat it. The canonical network has 6 routes, so brute force over all `C(6,k)`
+subsets is trivially tractable and would turn a prose caveat into a number.
+*Done when:* an exact small-k solver or a `greedy_optimality_gap` lives in
+`resilience.py`, tested against exhaustive enumeration on the canonical network
+and reported as a token.
+*Command:* `uv run pytest tests/test_resilience.py -k gap -v`
+
+**E2 — measure delivered volume net of evaporation.** See the first Known
+limitation below for why this is currently unmeasured and honestly labelled.
+Closing it means implementing a generalised lossy-flow maximisation (not the
+capacity max-flow) with a stated tie-break that makes the assignment unique.
+*Done when:* a `delivered_volume_net_of_evaporation` exists with a test pinning
+it strictly below `HYDRO_NETWORK_DELIVERY` on the canonical network, and the
+manuscript reports both.
+*Command:* `uv run pytest tests/test_hydrology.py -k net_of_evaporation -v`
+
+**E3 — adopt the shared provenance helper (its precondition is now met).**
+`mission.py:80-83` computes its own canonical SHA-256 over a key-sorted JSON
+dump. `bond-utilities` now ships `bond_utilities/mission_io.py` with
+`hash_payload()` (line 45) and `record_provenance_outcome()` (line 153) on the
+same canonical-JSON scheme, so the "confirm the helper exists" condition the
+previous TODO waited on is satisfied. The remaining question is not technical:
+this package's stated contract (`README.md` "binds to _only_ `bond-api`";
+`AGENTS.md` layer contract) forbids a second suite dependency, so adopting the
+helper means amending that contract.
+*Done when:* either the provenance block is byte-identical to what the shared
+helper writes and the layer contract is amended to permit the dependency; or a
+test asserts `_canonical_hash` agrees byte-for-byte with `hash_payload`'s scheme
+without importing it, and this closes as "compatible by test, not by dependency".
+*Command:* `uv run pytest tests/test_mission.py -k provenance -v`
+
+**E4 — multi-period cartel dynamics.** The reservoir simulation applies one
+constant restriction fraction across the whole 12-period horizon
+(`analysis.py:121`, `RESTRICTION_FRAC`). A time-varying squeeze — ramping, or
+releasing to fracture a coalition — is the more interesting strategic object and
+is not modelled.
+*Done when:* `run_reservoir` accepts a per-period restriction schedule, with a
+test that a constant schedule reproduces today's `aggregate_leverage` exactly.
+*Command:* `uv run pytest tests/test_water_cartel.py -k schedule -v`
+
+**E5 — demand response.** `pricing.py` clears a fixed linear demand curve
+against a supply the reservoir model produces, but nothing feeds price back into
+consumption. There is no dynamic equilibrium, so `PRICE_SCARCITY_RENT` is an
+upper bound on a single period rather than a path.
+*Done when:* a multi-period clearing loop exists with a convergence test, and the
+manuscript distinguishes the single-period bound from the path.
+*Command:* `uv run pytest tests/test_pricing.py -k equilibrium -v`
+
+**E6 — a sampled Shapley estimator, if and only if the graph grows.** Both power
+indices in `shapley.py` enumerate all `2ⁿ` coalitions. That is exact and fast at
+the canonical three actors and is the right choice there. Trigger: a cartel
+graph beyond roughly ten actors.
+*Done when (if triggered):* a sampled estimator sits **beside** the exact solver
+— never replacing it — with a test that the two agree within tolerance on the
+canonical three-actor instance.
+*Command:* `uv run pytest tests/test_shapley.py -k sampled -v`
+
+## Known limitations (not bugs)
+
+- **Reported flow is *routed* volume, not volume net of evaporation — and the
+  claim was softened to say so.** The audit found delivery figures exceeding the
+  network's own supply; the fix bounded max-flow by aquifer yield but did **not**
+  make max-flow evaporation-aware. Maximising volume net of per-edge evaporation
+  is a generalised lossy-flow problem whose optimum is not the capacity
+  max-flow, and a max-flow assignment is not unique, so "the" evaporation implied
+  by a solution is not a well-defined property of the network. The honest scope
+  now stated at `src/quantum_of_solace/hydrology.py:20-32`, in
+  `manuscript/03_results.md` §1 and in `manuscript/02_methodology.md` is: routed
+  volume is an *upper bound* on delivered volume; evaporation is modelled exactly
+  and separately in the per-node mass balance and in the evaporation-adjusted
+  routing cost; the manuscript claims nothing more. The property itself remains
+  unmeasured — that is E2, not a defect in the current claim.
+- **The quantity-phrase gate is lexical and cannot see a wrong number.**
+  `tests/test_scripts_smoke.py:100-121` matches a fixed list of phrase forms
+  (`minority`, `several times`, `orders of magnitude`, …) plus bare decimals. It
+  catches prose asserting a magnitude without a token; it cannot detect a wrong
+  value inside a correctly-plumbed token. That defence is
+  `data/claim_ledger.yaml` re-derived by `tests/test_claim_ledger.py`, plus the
+  per-metric derivation tests. Both gates carry negative controls
+  (`test_the_decimal_gate_rejects_a_hand_authored_metric`,
+  `test_the_quantity_gate_rejects_the_claims_it_was_written_for` at
+  `tests/test_scripts_smoke.py:193`) that replay the exact false sentences which
+  once shipped, so a gate that stopped matching fails rather than passing
+  silently. Do not re-litigate this as "make the gate semantic".
+- **mypy is structurally blind to `bond_api` internals.** `bond-api` ships no
+  `py.typed` marker (verified: none under `bond-api/src/bond_api/`), so
+  `pyproject.toml:100-102` carries `ignore_missing_imports` for `bond_api.*`.
+  Nothing in this package can fix that. Reopen the moment upstream publishes the
+  marker — the fix is deleting that override block and re-running mypy.
+- **Per-settlement delivery maxima are alternatives, never addends.**
+  `RESULT_BORDER_DELIVERY` (65.0) and `RESULT_VALLEY_DELIVERY` (55.0) sum to
+  120.0 against an 80.0-unit network. This is correct and deliberate: the
+  settlements compete for the same aquifers.
+  `tests/test_resilience.py:64-75` pins the strict inequality so a future change
+  cannot quietly make the sum a headline. A modelling fact with a test, not a
+  bug.
+
+## Verification
+
+The gates for this package, with expected outcomes. Run all of them and read the
+output, not just the exit codes.
 
 ```bash
+# The gate. Expect: all tests pass, coverage >= 90% on src/.
 uv run pytest tests/ --cov=src --cov-fail-under=90
+
+# Style and types. Expect: "All checks passed!", "N files already formatted",
+# "Success: no issues found in 16 source files".
 uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/ tests/
 uv run mypy src/ scripts/
+
+# No mocks anywhere. Expect: "no mocks".
+grep -rn "unittest.mock\|MagicMock\|mocker.patch\|@patch\|create_autospec" tests/ || echo "no mocks"
+
+# No exemplar lineage. Expect: "no exemplar leftovers".
 grep -rn "template_code_project" . --exclude-dir=.venv --exclude-dir=.git || echo "no exemplar leftovers"
-git status --short   # clean after commit
+
+# Artifacts regenerate deterministically. Expect: exit 0, six PNGs, token JSON.
+uv run python scripts/generate_analysis.py
+uv run python scripts/z_generate_manuscript_variables.py
+
+# The mission flow. Expect: exit 0 (exit 2 on an unknown phase).
+uv run python scripts/run_mission.py full
+
+# Expect: clean after a path-scoped commit.
+git status --short
 ```
+
+`uv` cannot write its cache under a restrictive sandbox. `Failed to initialize
+cache at ~/.cache/uv` is an environment restriction, not a package failure —
+re-run with the sandbox disabled.
