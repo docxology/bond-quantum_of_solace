@@ -84,15 +84,32 @@ Classical microeconomics on a linear inverse demand curve `p(q) = a - b·q`:
 `market_outcome` (the whole competitive-vs-monopoly comparison as a frozen
 `MarketOutcome`).
 
+`point_elasticity` returns the *magnitude* of the point price elasticity,
+`p/(b·q)`: on `p = a − b·q` the demand function is `q(p) = (a − p)/b`, so
+`dq/dp = −1/b`. It previously returned `b·p/q`, wrong by a factor of `b²`, and
+is now cross-checked against a numerical derivative of the demand curve in
+`test_matches_a_numerical_derivative_of_the_demand_curve`. Note the two forms
+coincide at `b = 1`, so no fixture in that test uses `b = 1`.
+
 ### `resilience.py` — aqueduct interdiction
 
-Built on `hydrology`. `total_delivery` sums each settlement's maximum flow over
-every source; `single_route_criticality` recomputes it with each route removed
+Built on `hydrology`. `total_delivery` delegates to
+`HydrologicalNetwork.delivery_capacity` — one whole-network maximum flow with a
+super-source capped at each aquifer's yield — so it can never exceed
+`total_supply`. `single_route_criticality` recomputes it with each route removed
 and ranks the losses; `interdiction_sequence` runs the greedy worst-case attack
 that repeatedly cuts the most critical remaining route; `resilience_index` is
-the mean fraction of delivery retained after any single cut; `minimum_cut`
-reads the least-capacity separating route set off the residual graph, its value
-equal to the maximum flow.
+the **mean** fraction of delivery retained after a single cut (the assessment
+reports `worst_case_retention` separately, because a mean is not a bound);
+`minimum_cut` reads the least-capacity separating route set off the residual
+graph, its value equal to the maximum flow.
+
+**Supply invariant.** `total_delivery <= total_supply`, pinned by
+`test_never_exceeds_aquifer_supply`. The earlier formulation summed each
+settlement's per-source maximum flow independently, double-counting shared
+aquifer yield, and reported 120.0 delivered units against an 80.0-unit supply.
+Per-settlement capacities remain available but are **alternatives, not
+addends** — settlements compete for the same water.
 
 ### `shapley.py` — cooperative power
 

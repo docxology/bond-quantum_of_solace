@@ -5,8 +5,8 @@ aqueduct here, a pipeline there. This module quantifies how fragile the desert
 delivery network is to exactly that kind of attack, using deterministic
 network-science algorithms on top of :mod:`quantum_of_solace.hydrology`:
 
-* :func:`total_delivery` — the network's headline delivered volume (sum of
-  per-source maximum flows to every settlement);
+* :func:`total_delivery` — the network's headline routable volume (one
+  whole-network maximum flow, bounded by aquifer yield and route capacity);
 * :func:`single_route_criticality` — for each route, the delivery lost if that
   route is interdicted, ranked most-critical first;
 * :func:`interdiction_sequence` — a greedy worst-case attack that repeatedly
@@ -39,15 +39,18 @@ __all__ = [
 
 
 def total_delivery(network: HydrologicalNetwork) -> float:
-    """The network's total delivered volume: per-source max flow to every settlement.
+    """The network's total routable volume into its settlements in one period.
 
-    Sums, over every non-source node, the maximum flow each aquifer can push
-    to it. Deterministic and monotone: removing routes never increases it.
+    Delegates to :meth:`HydrologicalNetwork.delivery_capacity`, a single
+    whole-network maximum flow bounded by aquifer yields as well as route
+    capacities. It therefore never exceeds ``network.total_supply()``.
+    Deterministic and monotone: removing routes never increases it.
+
+    This is routed volume, not volume net of evaporation — see the
+    :mod:`quantum_of_solace.hydrology` module docstring for why that bound is
+    the honest one to report and where evaporation is accounted instead.
     """
-    settlements = sorted(set(network.node_names) - set(network.aquifers))
-    return sum(
-        network.max_flow(source, settlement).total_flow for settlement in settlements for source in network.aquifers
-    )
+    return network.delivery_capacity()
 
 
 @dataclass(frozen=True)

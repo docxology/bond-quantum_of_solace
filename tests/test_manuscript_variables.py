@@ -65,7 +65,7 @@ class TestGenerateVariables:
         # Numeric comparison, not lexicographic string comparison.
         assert float(variables["PRICE_RESTRICTED"]) > float(variables["PRICE_BASELINE"])
         assert "highland_aquifer->border_town" in variables["RESIL_CRITICAL_ROUTE"]
-        assert variables["RESIL_BASELINE"] == "120.0"
+        assert variables["RESIL_BASELINE"] == "80.0"
         assert variables["SHAPLEY_TOP_ACTOR"] == "quantum"
         assert variables["SHAPLEY_TOTAL"] == "7.0"
         assert variables["PRICE_DWL"] == "4050.0"
@@ -92,6 +92,43 @@ class TestGenerateVariables:
         assert variables["RESULT_AGG_HHI_BAND"] == "highly concentrated"
         assert variables["HHI_HIGH_THRESHOLD"] == "2500"
         assert variables["HHI_MODERATE_THRESHOLD"] == "1500"
+
+    def test_delivery_tokens_respect_the_supply_bound(self):
+        """The headline delivery token can never exceed the aquifer-yield token."""
+        variables = generate_variables()
+        assert float(variables["HYDRO_NETWORK_DELIVERY"]) <= float(variables["HYDRO_TOTAL_SUPPLY"])
+        assert float(variables["RESIL_BASELINE"]) <= float(variables["HYDRO_TOTAL_SUPPLY"])
+        # The per-settlement maxima are alternatives; their sum legitimately
+        # exceeds the bound, which is why prose must never add them.
+        per_settlement = float(variables["RESULT_BORDER_DELIVERY"]) + float(variables["RESULT_VALLEY_DELIVERY"])
+        assert per_settlement > float(variables["HYDRO_NETWORK_DELIVERY"])
+
+    def test_leverage_conversion_tokens_are_derived_not_asserted(self):
+        """Ownership, leverage and their ratio must agree to the rendered digits."""
+        variables = generate_variables()
+        ownership = float(variables["CARTEL_OWNERSHIP_PCT"])
+        leverage = float(variables["RESULT_AGG_LEVERAGE_PCT"])
+        ratio = float(variables["CARTEL_LEVERAGE_OWNERSHIP_RATIO"])
+        assert ratio == pytest.approx(leverage / ownership, abs=5e-3)
+        # 2 of 3 dams is a controlling share; the conversion still lands below 1.
+        assert ownership > 50.0
+        assert ratio < 1.0
+
+    def test_retention_tokens_are_distinct(self):
+        """Mean and worst-case retention are separate tokens with distinct values."""
+        variables = generate_variables()
+        assert float(variables["RESIL_INDEX"]) > float(variables["RESIL_WORST_RETENTION"])
+        assert int(variables["RESIL_CRITICAL_COUNT"]) + int(variables["RESIL_REDUNDANT_COUNT"]) == int(
+            variables["RESIL_ROUTE_COUNT"]
+        )
+
+    def test_elasticity_token_matches_the_demand_parameters(self):
+        """PRICE_ELASTICITY must be p/(b*q) at the rendered baseline, not b*p/q."""
+        variables = generate_variables()
+        price = float(variables["PRICE_BASELINE"])
+        quantity = float(variables["PRICE_SUPPLY_BASELINE"])
+        slope = float(variables["PRICE_DEMAND_B"])
+        assert float(variables["PRICE_ELASTICITY"]) == pytest.approx(price / (slope * quantity), abs=5e-4)
 
     def test_interdiction_sequence_tokens(self):
         """The interdiction narrative's step count and loss share are computed."""

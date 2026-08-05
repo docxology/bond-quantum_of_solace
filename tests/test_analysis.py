@@ -15,6 +15,7 @@ from quantum_of_solace.analysis import (
 )
 from quantum_of_solace.cartel_graph import CommodityCartelGraph
 from quantum_of_solace.hydrology import Aquifer, HydrologicalNetwork, Route
+from quantum_of_solace.pricing import inverse_demand
 from quantum_of_solace.water_cartel import Dam
 
 
@@ -27,7 +28,19 @@ class TestAssessHydrology:
         delivery = metrics["settlement_delivery"]
         assert delivery["border_town"] == 65.0
         assert delivery["valley_compact"] == 55.0
+        assert metrics["network_delivery"] == 80.0
         assert metrics["shortest_route_cost"]["border_town"] > 0.0
+
+    def test_network_delivery_never_exceeds_supply(self):
+        """The headline delivery figure is bounded by the aquifers' own output."""
+        metrics = assess_hydrology()
+        assert metrics["network_delivery"] <= metrics["total_supply"] + 1e-9
+
+    def test_per_settlement_figures_are_not_additive(self):
+        """Their sum exceeds the network bound: they compete for the same yield."""
+        metrics = assess_hydrology()
+        delivery = metrics["settlement_delivery"]
+        assert sum(delivery.values()) > metrics["network_delivery"]
 
     def test_provided_network(self):
         net = HydrologicalNetwork([Aquifer("a", 5.0)], [Route("a", "b", 5.0, 1.0, 0.0)])
@@ -85,16 +98,61 @@ class TestAssessPricing:
         assert metrics["monopoly_price"] == pytest.approx(55.0)
         assert metrics["deadweight_loss"] == pytest.approx(4050.0)
 
+    def test_revenue_max_quantity_actually_maximises_revenue(self):
+        """Verify a/(2b) by sweeping the curve, not by restating the formula."""
+        metrics = assess_pricing()
+        a, b = metrics["a"], metrics["b"]
+        peak = metrics["revenue_max_quantity"]
+        assert peak == pytest.approx(a / (2.0 * b))
+        sweep = [q / 10.0 for q in range(1, int(10 * a / b))]
+        best = max(sweep, key=lambda q: q * inverse_demand(q, a, b))
+        assert best == pytest.approx(peak, abs=0.2)
+
+    def test_the_cut_overshoots_the_revenue_peak_and_gross_revenue_falls(self):
+        """The manuscript says the squeeze lowers takings; this is why.
+
+        Inelastic demand makes a marginal withholding lucrative, but the
+        canonical cut crosses the revenue-maximising quantity, so revenue must
+        fall. Asserting the crossing *and* the fall keeps prose that claims the
+        cartel simply "makes money" from surviving.
+        """
+        metrics = assess_pricing()
+        assert metrics["supply_baseline"] > metrics["revenue_max_quantity"]
+        assert metrics["supply_restricted"] < metrics["revenue_max_quantity"]
+        assert metrics["revenue_restricted"] < metrics["revenue_baseline"]
+        assert metrics["elasticity"] < 1.0
+        # The rent is still positive: it is a premium on the volume still sold,
+        # which is a different quantity from total revenue.
+        assert metrics["scarcity_rent"] > 0.0
+
 
 class TestAssessResilience:
     def test_default(self):
         metrics = assess_resilience()
-        assert metrics["baseline_delivery"] == pytest.approx(120.0)
+        assert metrics["baseline_delivery"] == pytest.approx(80.0)
         assert metrics["critical_route"] == "highland_aquifer->border_town"
-        assert metrics["critical_loss"] == pytest.approx(30.0)
-        assert metrics["critical_route_count"] == 6
+        assert metrics["critical_loss"] == pytest.approx(20.0)
+        assert metrics["critical_route_count"] == 4
+        assert metrics["redundant_route_count"] == 2
         assert 0.0 < metrics["resilience_index"] < 1.0
         assert len(metrics["interdiction_sequence"]) == 3
+
+    def test_critical_and_redundant_counts_partition_the_routes(self):
+        """The two counts must sum to the route count, and neither is assumed.
+
+        The manuscript renders both rather than asserting that every route is
+        critical; this pins the partition so an unbound equality cannot creep
+        back into prose.
+        """
+        metrics = assess_resilience()
+        assert metrics["critical_route_count"] + metrics["redundant_route_count"] == metrics["route_count"]
+        assert 0 < metrics["critical_route_count"] < metrics["route_count"]
+
+    def test_mean_retention_is_not_the_worst_case(self):
+        """`resilience_index` (mean) must be reported apart from the worst cut."""
+        metrics = assess_resilience()
+        assert metrics["worst_case_retention"] == pytest.approx(0.75)
+        assert metrics["resilience_index"] > metrics["worst_case_retention"]
 
     def test_provided_network(self):
         net = HydrologicalNetwork([Aquifer("a", 5.0)], [Route("a", "b", 5.0, 1.0, 0.0)])
@@ -170,6 +228,27 @@ class TestAssessmentParameterMetadata:
         assert metrics["horizon_demand"] == pytest.approx((120.0 + 95.0 + 65.0) * SIMULATION_PERIODS)
         assert metrics["aggregate_leverage"] == pytest.approx(metrics["withheld_volume"] / metrics["horizon_demand"])
         assert 0.0 < metrics["aggregate_leverage"] < 1.0
+
+    def test_ownership_share_and_conversion_ratio(self):
+        """Ownership is 2 of 3 dams — a controlling share, and the code says so.
+
+        The conversion ratio is measured, not assumed to exceed 1: on this fleet
+        the withheld share lands *below* the ownership share, which is what the
+        manuscript now reports.
+        """
+        metrics = assess_water_cartel()
+        assert metrics["ownership_share"] == pytest.approx(2.0 / 3.0)
+        assert metrics["ownership_share"] > 0.5
+        assert metrics["leverage_to_ownership"] == pytest.approx(
+            metrics["aggregate_leverage"] / metrics["ownership_share"]
+        )
+        assert metrics["leverage_to_ownership"] < 1.0
+
+    def test_ownership_share_counts_only_dams_present_in_the_fleet(self):
+        """A fleet holding neither controlled dam has zero ownership share."""
+        metrics = assess_water_cartel([Dam("only", 100.0, 50.0, 10.0, 20.0, 15.0)])
+        assert metrics["ownership_share"] == 0.0
+        assert metrics["leverage_to_ownership"] == 0.0
 
     def test_cartel_graph_band_fields(self):
         metrics = assess_cartel_graph()

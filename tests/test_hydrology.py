@@ -3,6 +3,7 @@
 import pytest
 
 from quantum_of_solace.hydrology import (
+    SUPPLY_NODE,
     Aquifer,
     FlowSolution,
     HydrologicalNetwork,
@@ -266,3 +267,66 @@ class TestDijkstraFrontierPruning:
         assert all(volume > 0.0 for _, _, volume in solution.edge_flows)
         # Residual reachability must exclude the sink once the flow is maximal.
         assert "border_town" not in solution.reachable
+
+
+class TestDeliveryCapacity:
+    """Whole-network routing bounded by aquifer yield, not just route capacity."""
+
+    def test_default_network_is_yield_bound(self):
+        net = default_network()
+        assert net.delivery_capacity() == pytest.approx(80.0)
+        assert net.delivery_capacity() == pytest.approx(net.total_supply())
+
+    def test_settlements_property_excludes_aquifers(self):
+        net = default_network()
+        assert net.settlements == ("border_town", "valley_compact")
+
+    def test_single_target_matches_a_direct_max_flow_when_yield_is_ample(self):
+        """With one source and slack yield the two formulations must agree."""
+        net = HydrologicalNetwork(
+            [Aquifer("deep", 100.0)],
+            [Route("deep", "camp", 7.0, 1.0, 0.0), Route("deep", "relay", 4.0, 1.0, 0.0)],
+        )
+        assert net.delivery_capacity(["camp"]) == pytest.approx(net.max_flow("deep", "camp").total_flow)
+
+    def test_yield_binds_below_route_capacity(self):
+        """A trickling aquifer cannot fill a wide pipe, whatever the pipe allows."""
+        net = HydrologicalNetwork([Aquifer("seep", 2.0)], [Route("seep", "camp", 500.0, 1.0, 0.0)])
+        assert net.delivery_capacity() == pytest.approx(2.0)
+
+    def test_shared_yield_is_not_double_counted_across_settlements(self):
+        net = HydrologicalNetwork(
+            [Aquifer("spring", 10.0)],
+            [Route("spring", "north", 40.0, 1.0, 0.0), Route("spring", "south", 40.0, 1.0, 0.0)],
+        )
+        assert net.delivery_capacity(["north"]) == pytest.approx(10.0)
+        assert net.delivery_capacity(["south"]) == pytest.approx(10.0)
+        # Both together still cannot exceed the single aquifer's yield.
+        assert net.delivery_capacity() == pytest.approx(10.0)
+
+    def test_no_targets_yields_zero(self):
+        # Both nodes are aquifers, so the network has no settlement to serve.
+        net = HydrologicalNetwork(
+            [Aquifer("upper", 10.0), Aquifer("lower", 5.0)],
+            [Route("upper", "lower", 8.0, 1.0, 0.0)],
+        )
+        assert net.settlements == ()
+        assert net.delivery_capacity() == 0.0
+
+    def test_unknown_target_is_rejected(self):
+        net = default_network()
+        with pytest.raises(ValueError, match="unknown delivery target"):
+            net.delivery_capacity(["mirage"])
+
+    def test_reserved_sentinel_node_names_are_rejected(self):
+        """A network already using the sentinel names must fail loudly.
+
+        Silently reusing them would splice the caller's node into the augmented
+        super-source/super-sink graph and report a fabricated capacity.
+        """
+        net = HydrologicalNetwork(
+            [Aquifer(SUPPLY_NODE, 10.0)],
+            [Route(SUPPLY_NODE, "camp", 5.0, 1.0, 0.0)],
+        )
+        with pytest.raises(ValueError, match="reserved"):
+            net.delivery_capacity()

@@ -134,6 +134,7 @@ class MissionProvider:
         shapley = assess_shapley()
         delivery = cast("dict[str, float]", hydrology["settlement_delivery"])
         total_supply = cast("float", hydrology["total_supply"])
+        network_delivery = cast("float", hydrology["network_delivery"])
         aggregate_leverage = cast("float", water["aggregate_leverage"])
         aggregate_hhi = cast("float", cartel["aggregate_hhi"])
         baseline_price = cast("float", pricing["baseline_price"])
@@ -143,12 +144,14 @@ class MissionProvider:
                 Finding(label="goal", detail=request.goal),
                 Finding(
                     label="network_supply",
-                    detail=f"total aquifer yield {total_supply:.1f} units/period",
+                    detail=f"total aquifer yield {total_supply:.1f} units/period, "
+                    f"of which {network_delivery:.1f} is routable to settlements",
                 ),
                 Finding(
                     label="settlement_delivery",
-                    detail=f"border_town {delivery['border_town']:.1f}, "
-                    f"valley_compact {delivery['valley_compact']:.1f} max units/period",
+                    detail=f"border_town {delivery['border_town']:.1f} or "
+                    f"valley_compact {delivery['valley_compact']:.1f} max routed units/period "
+                    f"(alternatives competing for the same yield, not additive)",
                 ),
                 Finding(
                     label="cartel_leverage",
@@ -211,10 +214,12 @@ class MissionProvider:
         """Summarise the mission and record the QUANTUM standing lessons."""
         lessons = (
             "evaporation hollows out delivered water — routing must minimise effective loss",
-            "a cartel holding a minority of dams still withholds a sizeable share of horizon demand",
+            "the cartel's withheld share of horizon demand runs below its share of the dam fleet, "
+            "because it throttles rather than closes the dams it holds",
             "multi-resource concentration (HHI) exposes leverage that single-commodity view misses",
-            "water is sharply inelastic, so even a modest supply cut raises price far more than volume",
-            "no desert aqueduct is redundant — every single cut costs delivery, making the network fragile",
+            "water demand is inelastic, so a supply cut raises price proportionally more than it cuts volume — "
+            "by the reciprocal of the elasticity, not without bound",
+            "most desert aqueducts are critical, but not all — redundancy is measured, never assumed",
             "cooperative power is concentrated: the leading cartel claims the largest Shapley share",
         )
         return Debrief(outcome=outcome, lessons=lessons)

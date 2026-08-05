@@ -97,16 +97,112 @@ class TestManuscriptCrossReference:
         missing = self._tokens_in(self._sections()) - produced
         assert not missing, f"manuscript tokens not generated: {sorted(missing)}"
 
-    def test_results_prose_carries_no_bare_decimal_metrics(self):
-        """Results prose states measurements through tokens, never as literals.
+    #: Quantity phrases that assert a magnitude or a ratio without a token.
+    #:
+    #: A bare-decimal scan is blind to prose numerals, which is exactly how "a
+    #: minority of the dams" (the cartel holds 2 of 3), "a quarter of the
+    #: region's water" and "several times its size" (the converted share is
+    #: below the holding share) survived earlier review. Every phrase below
+    #: makes a claim that must instead be carried by a computed token.
+    QUANTITY_PHRASES = (
+        r"\bminority\b",
+        r"\bmajority\b",
+        r"\ba quarter of\b",
+        r"\ba third of\b",
+        r"\ba fifth of\b",
+        r"\bhalf (?:of|the)\b",
+        r"\bseveral times\b",
+        r"\bmany times\b",
+        r"\borders? of magnitude\b",
+        r"\btwice (?:as|the)\b",
+        r"\bdouble the\b",
+        r"\bfar (?:more|less|greater|smaller) than\b",
+        r"\bvastly\b",
+        r"\boverwhelming(?:ly)?\b",
+        r"\bdisproportionate(?:ly)?\b",
+    )
 
-        Integers survive (section numbering, list ordinals); a bare decimal in
-        the results narrative is a hand-authored metric that escaped the token
-        pipeline.
+    @staticmethod
+    def _to_prose(text: str) -> str:
+        """Reduce markdown to narrative prose for the metric gates.
+
+        Four things are stripped, each because it is markup rather than a
+        sentence making a claim: fenced code blocks, inline code spans (a pinned
+        `requires-python >= 3.10` is a version constraint, not a measurement),
+        figure includes with their attribute braces, and document cross-
+        references of the form `§5.3`. Everything else — every ordinary
+        sentence in every numbered section — is scanned.
         """
-        results = (PROJECT_ROOT / "manuscript" / "03_results.md").read_text(encoding="utf-8")
-        detokenised = re.sub(r"\{\{[A-Z0-9_]+\}\}", "TOKEN", results)
-        # Strip figure paths, which legitimately carry no numerals but may in future.
-        detokenised = re.sub(r"!\[[^\]]*\]\([^)]*\)\{[^}]*\}", "", detokenised)
-        stray = re.findall(r"(?<![\w.])\d+\.\d+(?![\w])", detokenised)
-        assert not stray, f"hand-authored decimal metrics in results prose: {stray}"
+        text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+        text = re.sub(r"`[^`\n]*`", "", text)
+        text = re.sub(r"!\[[^\]]*\]\([^)]*\)(?:\{[^}]*\})?", "", text)
+        text = re.sub(r"§\s*\d+(?:\.\d+)*", "", text)
+        return re.sub(r"\{\{[A-Z0-9_]+\}\}", "TOKEN", text)
+
+    @classmethod
+    def _prose(cls, section: Path) -> str:
+        return cls._to_prose(section.read_text(encoding="utf-8"))
+
+    @staticmethod
+    def _bare_decimals(prose: str) -> list[str]:
+        return re.findall(r"(?<![\w.])\d+\.\d+(?![\w])", prose)
+
+    def test_the_decimal_gate_rejects_a_hand_authored_metric(self):
+        """Negative control: a bare decimal in a sentence must be detected.
+
+        A scan that stopped matching would otherwise pass every section
+        silently. The second assertion documents the stripped forms, so
+        widening the exemptions shows up here as a deliberate edit.
+        """
+        assert self._bare_decimals(self._to_prose("The network delivers 120.0 units per period."))
+        assert not self._bare_decimals(self._to_prose("Pinned to `>= 3.10`, described in §5.3, yielding TOKEN."))
+
+    def test_prose_carries_no_bare_decimal_metrics(self):
+        """No numbered section states a measurement as a bare decimal literal.
+
+        Scans **every** numbered section, not just the results: the inverted
+        leverage claim lived in `04_conclusion.md`, which the earlier
+        results-only scan never opened. Integers survive (section numbering,
+        list ordinals, definitional thresholds such as the unit-elastic 1).
+        """
+        offenders: dict[str, list[str]] = {}
+        for section in self._sections():
+            stray = self._bare_decimals(self._prose(section))
+            if stray:
+                offenders[section.name] = stray
+        assert not offenders, f"hand-authored decimal metrics in prose: {offenders}"
+
+    def test_prose_carries_no_untokenised_quantity_claims(self):
+        """No numbered section asserts a magnitude in words instead of a token.
+
+        This gate is lexical, and its limits are stated rather than implied: it
+        cannot tell whether the *value* inside a token is right, and it only
+        catches the phrase forms listed in `QUANTITY_PHRASES`. What it does
+        guarantee is that this specific family of prose-only quantity claims —
+        the family that produced three of this package's false statements —
+        fails the suite instead of shipping.
+        """
+        pattern = re.compile("|".join(self.QUANTITY_PHRASES), re.IGNORECASE)
+        offenders: dict[str, list[str]] = {}
+        for section in self._sections():
+            hits = pattern.findall(self._prose(section))
+            if hits:
+                offenders[section.name] = hits
+        assert not offenders, f"untokenised quantity claims in prose: {offenders}"
+
+    def test_the_quantity_gate_rejects_the_claims_it_was_written_for(self):
+        """Negative control: the historical false sentences must trip the gate.
+
+        Without this, a gate whose pattern list silently stopped matching would
+        stay green forever. These are the exact strings that shipped.
+        """
+        pattern = re.compile("|".join(self.QUANTITY_PHRASES), re.IGNORECASE)
+        historical_false_claims = (
+            "Owning a minority of the dams is enough to remove a quarter of the region's water.",
+            "a partial holding converts into a share of regional supply several times its size",
+            "a cartel with minority dam ownership and a lead in high-value commodities",
+            "leaving TOKEN units still flowing — a majority of supply lost",
+            "the price moves far more than the volume",
+        )
+        undetected = [claim for claim in historical_false_claims if not pattern.search(claim)]
+        assert not undetected, f"the gate no longer catches its own founding cases: {undetected}"

@@ -15,11 +15,26 @@ claims:
     evidence: "quantum_of_solace.hydrology.default_network; analysis.assess_hydrology"
     determinism: true
 
+  - id: "quantum.hydrology.network_delivery"
+    claim: >-
+      The whole network can route 80.0 units per period into its settlements.
+      This is one max-flow with a super-source capped at each aquifer's yield,
+      so it cannot exceed total_supply (80.0). It is ROUTED volume: evaporation
+      is not deducted, and it bounds delivered volume from above.
+    value: 80.0
+    token: "HYDRO_NETWORK_DELIVERY"
+    evidence: "quantum_of_solace.hydrology.delivery_capacity; analysis.assess_hydrology"
+    determinism: true
+
   - id: "quantum.hydrology.border_delivery"
-    claim: "border_town receives 65.0 max delivered units per period"
+    claim: >-
+      border_town can be routed 65.0 units per period when the network serves it
+      alone. This is an ALTERNATIVE to valley_compact's 55.0, not an addend: the
+      two settlements draw on the same aquifers and their sum (120.0) exceeds
+      what the network can route in total.
     value: 65.0
     token: "RESULT_BORDER_DELIVERY"
-    evidence: "quantum_of_solace.hydrology.max_flow (Edmonds-Karp); analysis.assess_hydrology"
+    evidence: "quantum_of_solace.hydrology.delivery_capacity; analysis.assess_hydrology"
     determinism: true
 
   - id: "quantum.water_cartel.aggregate_leverage"
@@ -31,6 +46,39 @@ claims:
     tolerance: 0.0005
     token: "RESULT_AGG_LEVERAGE"
     evidence: "quantum_of_solace.water_cartel.cartel_leverage; analysis.assess_water_cartel"
+    determinism: true
+
+  - id: "quantum.water_cartel.leverage_to_ownership"
+    claim: >-
+      The cartel holds 2 of 3 dams (66.7% of the fleet, a controlling share) and
+      converts it into 25.6% of horizon demand withheld — a ratio of 0.38. The
+      converted share is BELOW the ownership share, not a multiple of it.
+    value: 0.38
+    tolerance: 0.005
+    token: "CARTEL_LEVERAGE_OWNERSHIP_RATIO"
+    evidence: "quantum_of_solace.analysis.assess_water_cartel (leverage_to_ownership)"
+    determinism: true
+
+  - id: "quantum.pricing.point_elasticity"
+    claim: >-
+      Magnitude of the point price elasticity of demand at the baseline is 0.869
+      = p/(b*q) = 46.483/(0.25*214.067). Below 1, so demand is inelastic there;
+      the proportional price rise exceeds the proportional volume cut by exactly
+      1/0.869.
+    value: 0.869
+    tolerance: 0.0005
+    token: "PRICE_ELASTICITY"
+    evidence: "quantum_of_solace.pricing.point_elasticity; analysis.assess_pricing"
+    determinism: true
+
+  - id: "quantum.resilience.worst_case_retention"
+    claim: >-
+      The single worst aqueduct cut retains 0.750 of routed volume. This, not
+      the 0.917 mean index, is the worst-case bound.
+    value: 0.750
+    tolerance: 0.0005
+    token: "RESIL_WORST_RETENTION"
+    evidence: "quantum_of_solace.resilience.single_route_criticality; analysis.assess_resilience"
     determinism: true
 
   - id: "quantum.cartel_graph.aggregate_hhi"
@@ -49,8 +97,11 @@ claims:
     determinism: true
 
   - id: "quantum.resilience.index"
-    claim: "Mean delivery retained after any single aqueduct cut is 0.833"
-    value: 0.833
+    claim: >-
+      MEAN routed volume retained across the six single-aqueduct cuts is 0.917.
+      This is an average, not a guarantee; the worst single cut is recorded
+      separately as quantum.resilience.worst_case_retention.
+    value: 0.917
     tolerance: 0.0005
     token: "RESIL_INDEX"
     evidence: "quantum_of_solace.resilience.resilience_index; analysis.assess_resilience"

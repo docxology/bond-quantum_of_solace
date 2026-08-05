@@ -50,16 +50,30 @@ ALL_FIGURES = (
 
 
 def figure_hydrology_delivery(out_dir: Path) -> Path:
-    """Bar chart of each settlement's maximum delivered water per period."""
+    """Per-settlement routing maxima against the network-wide bound.
+
+    Each bar is what the network could route to that settlement if it served it
+    alone; the dashed line is the whole-network routable volume. The bars are
+    alternatives competing for the same aquifer yield, so their sum exceeds the
+    line — drawing the line is what stops the chart being read additively.
+    """
     metrics = assess_hydrology()
     delivery = cast("dict[str, float]", metrics["settlement_delivery"])
+    network_delivery = cast("float", metrics["network_delivery"])
     settlements = sorted(delivery)
     values = [delivery[name] for name in settlements]
 
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.bar(settlements, values, color="#1e3a8a")
-    ax.set_ylabel("Max delivered water (units / period)")
+    ax.axhline(
+        network_delivery,
+        color="#b91c1c",
+        linestyle="--",
+        label=f"whole-network routable {network_delivery:.0f} (bars are alternatives, not addends)",
+    )
+    ax.set_ylabel("Max routed water (units / period)")
     ax.set_title("Desert network settlement delivery")
+    ax.legend(fontsize="small")
     ax.grid(axis="y", linestyle=":", alpha=0.4)
     for i, value in enumerate(values):
         ax.text(i, value + 0.5, f"{value:.0f}", ha="center", va="bottom")
@@ -161,7 +175,7 @@ def figure_resilience_interdiction(out_dir: Path) -> Path:
     ax.axhline(baseline, color="#1e3a8a", linestyle="--", label=f"baseline {baseline:.0f}")
     for i, value in enumerate(after):
         ax.text(i, value + 1.0, f"{value:.0f}", ha="center", va="bottom")
-    ax.set_ylabel("Delivered water after cut (units / period)")
+    ax.set_ylabel("Routed water after cut (units / period)")
     ax.set_title("Greedy worst-case aqueduct interdiction")
     ax.legend(fontsize="small")
     ax.grid(axis="y", linestyle=":", alpha=0.4)

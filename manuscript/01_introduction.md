@@ -33,7 +33,8 @@ the pure domain core.
   index, top-k concentration ratios and dominance analysis.
 * **Scarcity pricing** (`pricing.py`): the market that converts a withheld
   volume into money — a linear demand curve, the clearing price of a restricted
-  supply, the point elasticity that makes water so profitable to withhold, and
+  supply, the point elasticity that governs how much of a volume cut converts
+  into price, and
   the monopoly solution with its deadweight loss.
 
 **The coercive layer — what the cartel can do beyond owning the taps.**

@@ -22,6 +22,22 @@ Three algorithms operate on the resulting network:
 * **Maximum flow** — Edmonds–Karp with a residual graph and reverse edges, so
   already-assigned flow can be re-routed. This yields the most water a
   settlement can receive per period under the route capacities.
+* **Delivery capacity** — :func:`delivery_capacity` solves a *single*
+  whole-network flow with a super-source feeding each aquifer an edge capped at
+  that aquifer's yield and every settlement draining to a super-sink. The
+  aquifer yields therefore bind, and the result cannot exceed
+  :func:`total_supply`. Summing independent per-source maximum flows would
+  double-count shared yield and can report more water than the aquifers
+  produce; the single-flow formulation is what rules that out.
+
+Both flow figures are **routed** volume under capacity and yield constraints,
+with evaporation *not* deducted. Maximising volume net of per-edge evaporation
+is a generalised (lossy) flow problem whose optimum is not the capacity maximum
+flow, and a maximum-flow assignment is not unique, so the evaporation implied by
+"the" solution is not a property of the network. Evaporation is instead
+quantified exactly by the mass balance and by the effective unit cost that
+Dijkstra minimises. Routed volume bounds delivered volume from above, and this
+manuscript claims no more than that.
 
 ## Water-rights cartel (`quantum_of_solace/water_cartel.py`)
 
@@ -63,10 +79,15 @@ is the scarcity price at which a fixed supply is absorbed, and
 the price-rise fraction, and the scarcity rent collected on the reduced volume.
 The standard monopoly solution (MR = MC), with :func:`monopoly_price`,
 :func:`monopoly_quantity` and :func:`deadweight_loss`, quantifies the social
-cost of concentrated control. The baseline and restricted supplies in the
-assessment are computed from the *real* dam fleet (unrestricted vs
-cartel-restricted reservoir release), so pricing is measured from the same
-model, not assumed.
+cost of concentrated control. :func:`point_elasticity` returns the magnitude of
+the point price elasticity, which on ``p = a − b·q`` is ``p/(b·q)`` — the
+demand function is ``q(p) = (a − p)/b``, so ``dq/dp = −1/b``.
+
+The baseline and restricted supplies in the assessment are computed from the
+*real* dam fleet (unrestricted vs cartel-restricted reservoir release), so
+pricing is measured from the same model, not assumed. They are dam releases, not
+hydrology-network routed volume: the two subsystems are separate assets and the
+manuscript keeps their units apart.
 
 ## Aqueduct interdiction (`quantum_of_solace/resilience.py`)
 
@@ -74,8 +95,11 @@ Over the hydrology network, :func:`single_route_criticality` ranks every route
 by the delivery lost if it alone is cut (recomputing maximum flow after each
 removal); :func:`interdiction_sequence` drives a greedy worst-case attack that
 repeatedly removes the most critical remaining route; and
-:func:`resilience_index` reports the mean fraction of delivery retained after a
-single cut. :func:`minimum_cut` finds the least-capacity set of routes
+:func:`resilience_index` reports the **mean** fraction of delivery retained
+after a single cut. The mean is not a worst-case bound, so the assessment also
+reports ``worst_case_retention`` — the minimum of the same set — and the two are
+carried into the manuscript as separate tokens so neither can stand in for the
+other. :func:`minimum_cut` finds the least-capacity set of routes
 separating supply from a settlement via the residual reachability of the
 Edmonds–Karp solution, whose value equals the maximum flow by the
 max-flow/min-cut theorem.

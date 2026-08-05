@@ -17,9 +17,9 @@ should be read as if it did:
   drought return period or a reservoir reliability;
 * an econometric demand study — the demand curve is a stylised linear
   instrument for reasoning about scarcity rent, not a fitted model of any real
-  water market, though the sharply inelastic behaviour it produces matches the
-  direction reported in the empirical meta-analysis literature
-  [@espey1997price];
+  water market, though the inelastic behaviour it produces at the assessed
+  baseline (elasticity magnitude below 1) matches the direction reported in the
+  empirical meta-analysis literature [@espey1997price];
 * strategic interaction between the actors — the power indices allocate the
   value of a cooperative game and do not model entry, deterrence, or
   retaliation.
@@ -44,8 +44,11 @@ the specific source for each.
   [@doj2010merger].
 * **Prices** — linear-demand monopoly pricing (MR = MC) and deadweight-loss
   analysis are textbook microeconomics; the empirical inelasticity of
-  residential water demand that makes withholding profitable is documented by
-  Espey, Espey & Shaw [@espey1997price].
+  residential water demand is documented by Espey, Espey & Shaw
+  [@espey1997price]. Inelasticity means a volume cut moves price more than
+  proportionally; whether a *particular* cut raises the seller's revenue
+  depends on which side of the revenue peak it lands, which this package
+  measures rather than assumes.
 * **Cooperative power** — the Shapley value [@shapley1953value] and the Banzhaf
   index [@banzhaf1965weighted], whose continuous and normalised forms are
   characterised by Dubey & Shapley [@dubey1979mathematical]. Both are computed

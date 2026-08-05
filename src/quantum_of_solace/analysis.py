@@ -11,6 +11,8 @@ All results are computed (never hand-authored) and fully deterministic.
 
 from __future__ import annotations
 
+from typing import cast
+
 from quantum_of_solace.cartel_graph import (
     HHI_HIGHLY_CONCENTRATED,
     HHI_MODERATELY_CONCENTRATED,
@@ -19,7 +21,7 @@ from quantum_of_solace.cartel_graph import (
     default_cartel,
 )
 from quantum_of_solace.hydrology import HydrologicalNetwork, default_network
-from quantum_of_solace.pricing import default_demand, market_outcome, scarcity_impact
+from quantum_of_solace.pricing import default_demand, market_outcome, monopoly_quantity, revenue, scarcity_impact
 from quantum_of_solace.resilience import (
     interdiction_sequence,
     resilience_index,
@@ -61,18 +63,25 @@ INTERDICTION_STEPS = 3
 
 
 def assess_hydrology(network: HydrologicalNetwork | None = None) -> dict[str, object]:
-    """Headline hydrology metrics: supply, settlement delivery, routing cost.
+    """Headline hydrology metrics: supply, delivery capacity, routing cost.
 
-    ``settlement_delivery`` sums each settlement's maximum flow over all
-    sources; ``shortest_route_cost`` is the least evaporation-adjusted cost to
-    reach a settlement from its cheapest source.
+    ``network_delivery`` is the whole-network routable volume per period,
+    bounded by aquifer yield as well as route capacity, so it never exceeds
+    ``total_supply``. ``settlement_delivery`` gives each settlement's maximum
+    when the network is directed at it *alone*; those per-settlement figures are
+    mutually exclusive alternatives and must never be summed — the settlements
+    compete for the same aquifer yield. ``shortest_route_cost`` is the least
+    evaporation-adjusted cost to reach a settlement from its cheapest source.
+
+    Both delivery figures are routed volume, not volume net of evaporation; see
+    the :mod:`quantum_of_solace.hydrology` module docstring.
     """
     net = network if network is not None else default_network()
-    settlements = sorted(set(net.node_names) - set(net.aquifers))
+    settlements = list(net.settlements)
     delivery: dict[str, float] = {}
     route_cost: dict[str, float] = {}
     for settlement in settlements:
-        delivery[settlement] = sum(net.max_flow(source, settlement).total_flow for source in net.aquifers)
+        delivery[settlement] = net.delivery_capacity([settlement])
         costs: list[float] = []
         for source in net.aquifers:
             try:
@@ -87,6 +96,7 @@ def assess_hydrology(network: HydrologicalNetwork | None = None) -> dict[str, ob
         "aquifer_count": len(net.aquifers),
         "settlement_count": len(settlements),
         "settlements": settlements,
+        "network_delivery": net.delivery_capacity(),
         "settlement_delivery": delivery,
         "shortest_route_cost": route_cost,
     }
@@ -100,9 +110,18 @@ def assess_water_cartel(
     ``aggregate_leverage`` is a horizon-consistent share in ``[0, 1]``: total
     withheld volume over ``periods`` divided by the demand served over the same
     ``periods`` (``horizon_demand``).
+
+    ``ownership_share`` is the cartel's share of the dam fleet by count, and
+    ``leverage_to_ownership`` divides the leverage share by it. That ratio is
+    the honest measure of how the holding converts: above 1 the cartel punches
+    above its ownership, below 1 it punches below. Nothing forces either sign,
+    so the manuscript must read the measured value rather than assume one.
     """
     fleet = dams if dams is not None else default_dams()
     report = cartel_leverage(fleet, set(CONTROLLED_DAMS), RESTRICTION_FRAC, SIMULATION_PERIODS)
+    aggregate = float(cast("float", report["aggregate"]))
+    controlled_in_fleet = sum(1 for dam in fleet if dam.name in CONTROLLED_DAMS)
+    ownership_share = controlled_in_fleet / len(fleet) if fleet else 0.0
     return {
         "aggregate_leverage": report["aggregate"],
         "restriction_frac": RESTRICTION_FRAC,
@@ -110,6 +129,8 @@ def assess_water_cartel(
         "dam_count": len(fleet),
         "controlled_dam_count": len(CONTROLLED_DAMS),
         "controlled_dams": sorted(CONTROLLED_DAMS),
+        "ownership_share": ownership_share,
+        "leverage_to_ownership": aggregate / ownership_share if ownership_share > 0.0 else 0.0,
         "horizon_demand": report["horizon_demand"],
         "withheld_volume": report["withheld_volume"],
         "per_dam": report["per_dam"],
@@ -160,12 +181,20 @@ def assess_pricing() -> dict[str, object]:
     a, b, mc = default_demand()
     impact = scarcity_impact(baseline, restricted, a, b)
     outcome = market_outcome(a, b, mc)
+    # Revenue is maximised where marginal revenue is zero, i.e. the monopoly
+    # quantity of a zero-marginal-cost seller: a/(2b). Reported so the
+    # manuscript can say whether a given cut lands short of, at, or beyond it
+    # instead of assuming that withholding always raises takings.
+    revenue_max_quantity = monopoly_quantity(a, b, 0.0)
     return {
         "a": a,
         "b": b,
         "marginal_cost": mc,
         "supply_baseline": baseline,
         "supply_restricted": restricted,
+        "revenue_baseline": revenue(impact["baseline_price"], baseline),
+        "revenue_restricted": revenue(impact["restricted_price"], restricted),
+        "revenue_max_quantity": revenue_max_quantity,
         "baseline_price": impact["baseline_price"],
         "restricted_price": impact["restricted_price"],
         "price_rise_frac": impact["price_rise_frac"],
@@ -183,8 +212,15 @@ def assess_resilience(network: HydrologicalNetwork | None = None) -> dict[str, o
     """Headline aqueduct-interdiction and resilience metrics.
 
     Ranks the most critical single route, reports the greedy worst-case
-    interdiction sequence, and the mean single-cut resilience index — all
-    computed from the real hydrology network.
+    interdiction sequence, and the single-cut resilience index — all computed
+    from the real hydrology network.
+
+    ``resilience_index`` is the **mean** retained fraction across every single
+    cut; ``worst_case_retention`` is the minimum of the same set, i.e. the
+    fraction retained after the single worst cut. Only the latter is a
+    worst-case guarantee, and prose must not quote the mean as one.
+    ``critical_route_count`` and ``redundant_route_count`` partition
+    ``route_count``; nothing forces the critical count to equal the route count.
     """
     net = network if network is not None else default_network()
     baseline = total_delivery(net)
@@ -192,9 +228,13 @@ def assess_resilience(network: HydrologicalNetwork | None = None) -> dict[str, o
     most_critical = critical[0]
     sequence = interdiction_sequence(net, steps=INTERDICTION_STEPS)
     sequence_loss = sequence[-1].cumulative_loss if sequence else 0.0
+    critical_count = sum(1 for entry in critical if entry.delivery_after < baseline - 1e-9)
+    retained = [entry.delivery_after / baseline for entry in critical] if baseline > 0.0 else [0.0]
     return {
         "baseline_delivery": baseline,
         "route_count": len(net.routes),
+        "worst_case_retention": min(retained),
+        "redundant_route_count": len(net.routes) - critical_count,
         "interdiction_steps": len(sequence),
         "sequence_cumulative_loss": sequence_loss,
         "sequence_loss_frac": sequence_loss / baseline if baseline > 0.0 else 0.0,
@@ -202,7 +242,7 @@ def assess_resilience(network: HydrologicalNetwork | None = None) -> dict[str, o
         "critical_route": f"{most_critical.source}->{most_critical.target}",
         "critical_loss": most_critical.loss,
         "critical_loss_frac": most_critical.loss_fraction,
-        "critical_route_count": sum(1 for entry in critical if entry.delivery_after < baseline - 1e-9),
+        "critical_route_count": critical_count,
         "resilience_index": resilience_index(net),
         "interdiction_sequence": [
             {

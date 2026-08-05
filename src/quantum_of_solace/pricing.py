@@ -7,8 +7,9 @@ classical microeconomic tools on a linear inverse demand curve
 
 * :func:`market_clearing_price` — the scarcity price at which a fixed supply
   is fully absorbed (0 when supply exceeds the choke quantity);
-* :func:`point_elasticity` — the point price elasticity of demand, which is
-  characteristically low (inelastic) for water;
+* :func:`point_elasticity` — the magnitude of the point price elasticity of
+  demand, ``p/(b·q)``, which is characteristically below 1 (inelastic) for
+  water;
 * :func:`scarcity_impact` — how a cartel-cut supply raises the price, and the
   scarcity rent the cartel collects on the reduced volume;
 * :func:`monopoly_price` / :func:`monopoly_quantity` / :func:`deadweight_loss`
@@ -84,7 +85,12 @@ def market_clearing_price(supply: float, a: float, b: float) -> float:
 
 
 def point_elasticity(price: float, quantity: float, b: float) -> float:
-    """Point price elasticity of demand ``b·p/q`` at (price, quantity).
+    """Magnitude of the point price elasticity of demand at (price, quantity).
+
+    On the linear inverse demand curve ``p = a - b·q`` the demand function is
+    ``q(p) = (a - p)/b``, so ``dq/dp = -1/b`` and the elasticity is
+    ``(dq/dp)·(p/q) = -p/(b·q)``. This function returns its magnitude
+    ``p/(b·q)``, which is below 1 exactly when demand is inelastic.
 
     Raises ``ValueError`` for a zero quantity (elasticity is undefined there).
     """
@@ -94,7 +100,7 @@ def point_elasticity(price: float, quantity: float, b: float) -> float:
         raise ValueError("quantity must be a positive number")
     if not isinstance(b, (int, float)) or isinstance(b, bool) or b <= 0:
         raise ValueError("demand slope b must be a positive number")
-    return float(b) * float(price) / float(quantity)
+    return float(price) / (float(b) * float(quantity))
 
 
 def revenue(price: float, quantity: float) -> float:

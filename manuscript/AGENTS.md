@@ -44,12 +44,12 @@ python3 -c "import json,pathlib;print('\n'.join(sorted(json.loads(pathlib.Path('
 |---|---|---|
 | `BOND_*`, `CONFIG_*`, `PYTHON_VERSION`, `GENERATION_TIMESTAMP` | `manuscript/config.yaml` | Identity, version, keywords, the deterministic date stamp |
 | `MISSION_SEED` | `mission.py` | The provenance seed |
-| `HYDRO_*` | `assess_hydrology` | Supply, node/route/aquifer/settlement counts, settlement names |
-| `RESULT_BORDER_*`, `RESULT_VALLEY_*` | `assess_hydrology` | Per-settlement maximum delivery |
-| `CARTEL_*`, `RESULT_AGG_LEVERAGE*` | `assess_water_cartel` | Restriction, periods, dam counts, horizon demand, withheld volume, leverage share |
+| `HYDRO_*` | `assess_hydrology` | Supply, whole-network routable delivery, node/route/aquifer/settlement counts, settlement names |
+| `RESULT_BORDER_*`, `RESULT_VALLEY_*` | `assess_hydrology` | Per-settlement routing maxima — alternatives competing for the same yield, never to be summed in prose |
+| `CARTEL_*`, `RESULT_AGG_LEVERAGE*` | `assess_water_cartel` | Restriction, periods, dam counts, ownership share, leverage-to-ownership ratio, horizon demand, withheld volume, leverage share |
 | `RESULT_*_HHI*`, `HHI_*_THRESHOLD` | `assess_cartel_graph` | Per-commodity and portfolio HHI, the concentration band and its published thresholds |
 | `PRICE_*` | `assess_pricing` | Demand parameters, baseline/restricted supply and price, rise, rent, elasticity, monopoly point, deadweight loss |
-| `RESIL_*` | `assess_resilience` | Baseline delivery, critical route and loss, resilience index, interdiction-sequence steps and cumulative loss |
+| `RESIL_*` | `assess_resilience` | Baseline delivery, route/critical/redundant counts, critical route and loss, mean retention (`RESIL_INDEX`) and worst-case retention (`RESIL_WORST_RETENTION`), interdiction-sequence steps and cumulative loss |
 | `SHAPLEY_*` | `assess_shapley` | Weights, per-actor Shapley values, Banzhaf power, ranking, dominance gap, grand-coalition value |
 
 Adding a token: put the value in `analysis.py` first, expose it in

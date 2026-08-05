@@ -9,11 +9,27 @@ real, deterministic algorithms rather than stubs:
 * **shortest route** through the network via Dijkstra, minimising the
   evaporation-adjusted cost per delivered unit;
 * **maximum flow** from a source to a sink via the Edmonds–Karp algorithm,
-  honouring every route's capacity.
+  honouring every route's capacity;
+* **delivery capacity** — the network-wide routable volume into settlements,
+  bounded by aquifer yields as well as route capacities.
 
 Everything is computed from the supplied data — no random draws, no external
 calls. The module imports only the standard library so it stays copy-pasteable
 out of the BOND suite without ``bond_api`` or any infrastructure.
+
+Scope limitation, stated once here and honoured everywhere downstream:
+:meth:`HydrologicalNetwork.max_flow` and
+:meth:`HydrologicalNetwork.delivery_capacity` are computed on **sent** volume
+under capacity (and, for ``delivery_capacity``, yield) constraints. Evaporation
+is *not* deducted from either figure. Maximising volume net of per-edge
+evaporation is a generalised (lossy) flow problem, and its optimum is not the
+capacity max-flow; moreover a max-flow assignment is not unique, so the
+evaporation loss implied by "the" solution is not a well-defined property of the
+network. Evaporation is modelled explicitly and exactly by
+:meth:`HydrologicalNetwork.mass_balance`,
+:meth:`HydrologicalNetwork.delivered_volume` and
+:meth:`HydrologicalNetwork.effective_unit_cost`, which is where routing losses
+are quantified. Routed volume is therefore an upper bound on delivered volume.
 """
 
 from __future__ import annotations
@@ -22,6 +38,8 @@ from dataclasses import dataclass
 from heapq import heappop, heappush
 
 __all__ = [
+    "DEMAND_NODE",
+    "SUPPLY_NODE",
     "Aquifer",
     "FlowSolution",
     "HydrologicalNetwork",
@@ -32,6 +50,11 @@ __all__ = [
 
 #: Floating-point tolerance beneath which an augmenting path is ignored.
 MAX_FLOW_DELTA = 1e-9
+
+#: Sentinel super-source used by :meth:`HydrologicalNetwork.delivery_capacity`.
+SUPPLY_NODE = "__supply__"
+#: Sentinel super-sink used by :meth:`HydrologicalNetwork.delivery_capacity`.
+DEMAND_NODE = "__demand__"
 
 
 def _require_number(value: object, label: str, *, minimum: float = 0.0) -> None:
@@ -204,6 +227,11 @@ class HydrologicalNetwork:
     def routes(self) -> tuple[Route, ...]:
         """The routes, in declaration order."""
         return tuple(self._routes)
+
+    @property
+    def settlements(self) -> tuple[str, ...]:
+        """Every non-aquifer node — the consumers water is routed to, sorted."""
+        return tuple(node for node in self._nodes if node not in self._aquifers)
 
     def is_source(self, name: str) -> bool:
         """True when ``name`` names a declared aquifer (water source)."""
@@ -388,6 +416,61 @@ class HydrologicalNetwork:
             augmentations=augmentations,
             reachable=tuple(sorted(seen)),
         )
+
+    # -- network-wide delivery --------------------------------------------
+
+    def delivery_capacity(self, targets: tuple[str, ...] | list[str] | None = None) -> float:
+        """Maximum volume routable into ``targets`` in one period.
+
+        Unlike a per-source :meth:`max_flow`, this solves a *single* flow
+        problem over the whole network, so it honours the aquifer yields as
+        well as the route capacities: a super-source feeds each aquifer an edge
+        capped at that aquifer's ``yield_rate``, and every target drains into a
+        super-sink. Consequently the result can never exceed
+        :meth:`total_supply`, and per-target capacities are **alternatives, not
+        addends** — the sum of ``delivery_capacity([t])`` over targets generally
+        overstates ``delivery_capacity()`` because the targets compete for the
+        same water.
+
+        Summing independent per-source maximum flows, by contrast, double-counts
+        shared aquifer yield and can report more delivery than the aquifers
+        produce; that is precisely the defect this method exists to remove.
+
+        Evaporation is not deducted — see the module docstring. The figure is
+        routed volume, an upper bound on delivered volume.
+
+        Args:
+            targets: Nodes to route water into; defaults to every settlement.
+
+        Returns:
+            The maximum routable volume, or ``0.0`` when there is no target.
+
+        Raises:
+            ValueError: if a target is not a node of this network, or if a node
+                already uses one of the sentinel names.
+        """
+        chosen = tuple(self.settlements) if targets is None else tuple(targets)
+        unknown = [name for name in chosen if name not in self._nodes]
+        if unknown:
+            raise ValueError(f"unknown delivery target(s): {sorted(unknown)}")
+        if not chosen:
+            return 0.0
+        if SUPPLY_NODE in self._nodes or DEMAND_NODE in self._nodes:
+            raise ValueError(f"node names {SUPPLY_NODE!r} and {DEMAND_NODE!r} are reserved for delivery_capacity")
+
+        augmented_routes = list(self._routes)
+        for name, aquifer in self._aquifers.items():
+            augmented_routes.append(
+                Route(SUPPLY_NODE, name, capacity=aquifer.yield_rate, distance_km=0.0, evaporation=0.0)
+            )
+        for target in chosen:
+            drain = sum(route.capacity for route in self._routes if route.target == target)
+            augmented_routes.append(Route(target, DEMAND_NODE, capacity=drain, distance_km=0.0, evaporation=0.0))
+        augmented = HydrologicalNetwork(
+            aquifers=[Aquifer(name=SUPPLY_NODE, yield_rate=self.total_supply()), *self._aquifers.values()],
+            routes=augmented_routes,
+        )
+        return augmented.max_flow(SUPPLY_NODE, DEMAND_NODE).total_flow
 
     # -- network surgery ---------------------------------------------------
 
