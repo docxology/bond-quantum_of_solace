@@ -11,7 +11,13 @@ All results are computed (never hand-authored) and fully deterministic.
 
 from __future__ import annotations
 
-from quantum_of_solace.cartel_graph import CommodityCartelGraph, default_cartel
+from quantum_of_solace.cartel_graph import (
+    HHI_HIGHLY_CONCENTRATED,
+    HHI_MODERATELY_CONCENTRATED,
+    CommodityCartelGraph,
+    concentration_band,
+    default_cartel,
+)
 from quantum_of_solace.hydrology import HydrologicalNetwork, default_network
 from quantum_of_solace.pricing import default_demand, market_outcome, scarcity_impact
 from quantum_of_solace.resilience import (
@@ -32,6 +38,7 @@ from quantum_of_solace.water_cartel import Dam, cartel_leverage, default_dams, r
 
 __all__ = [
     "CONTROLLED_DAMS",
+    "INTERDICTION_STEPS",
     "RESTRICTION_FRAC",
     "SIMULATION_PERIODS",
     "assess_cartel_graph",
@@ -49,6 +56,8 @@ CONTROLLED_DAMS = frozenset({"highland_reservoir", "desert_holding"})
 RESTRICTION_FRAC = 0.5
 #: Number of simulation periods in the reservoir model.
 SIMULATION_PERIODS = 12
+#: Cuts in the canonical greedy worst-case aqueduct interdiction sequence.
+INTERDICTION_STEPS = 3
 
 
 def assess_hydrology(network: HydrologicalNetwork | None = None) -> dict[str, object]:
@@ -75,6 +84,9 @@ def assess_hydrology(network: HydrologicalNetwork | None = None) -> dict[str, ob
         "total_supply": net.total_supply(),
         "node_count": len(net.node_names),
         "route_count": len(net.routes),
+        "aquifer_count": len(net.aquifers),
+        "settlement_count": len(settlements),
+        "settlements": settlements,
         "settlement_delivery": delivery,
         "shortest_route_cost": route_cost,
     }
@@ -83,14 +95,23 @@ def assess_hydrology(network: HydrologicalNetwork | None = None) -> dict[str, ob
 def assess_water_cartel(
     dams: list[Dam] | None = None,
 ) -> dict[str, object]:
-    """Headline water-cartel metrics: leverage report and controlled dams."""
+    """Headline water-cartel metrics: leverage report and controlled dams.
+
+    ``aggregate_leverage`` is a horizon-consistent share in ``[0, 1]``: total
+    withheld volume over ``periods`` divided by the demand served over the same
+    ``periods`` (``horizon_demand``).
+    """
     fleet = dams if dams is not None else default_dams()
     report = cartel_leverage(fleet, set(CONTROLLED_DAMS), RESTRICTION_FRAC, SIMULATION_PERIODS)
     return {
         "aggregate_leverage": report["aggregate"],
         "restriction_frac": RESTRICTION_FRAC,
         "periods": SIMULATION_PERIODS,
+        "dam_count": len(fleet),
+        "controlled_dam_count": len(CONTROLLED_DAMS),
         "controlled_dams": sorted(CONTROLLED_DAMS),
+        "horizon_demand": report["horizon_demand"],
+        "withheld_volume": report["withheld_volume"],
         "per_dam": report["per_dam"],
     }
 
@@ -99,11 +120,17 @@ def assess_cartel_graph(cartel: CommodityCartelGraph | None = None) -> dict[str,
     """Headline cartel-graph metrics: per-commodity and aggregate HHI, dominance."""
     cg = cartel if cartel is not None else default_cartel()
     hhi_by_commodity = {commodity: cg.hhi(commodity) for commodity in cg.commodities}
+    aggregate_hhi = cg.hhi()
     return {
         "commodities": list(cg.commodities),
         "actors": list(cg.actors),
+        "actor_count": len(cg.actors),
         "hhi_by_commodity": hhi_by_commodity,
-        "aggregate_hhi": cg.hhi(),
+        "aggregate_hhi": aggregate_hhi,
+        "band_by_commodity": {commodity: concentration_band(value) for commodity, value in hhi_by_commodity.items()},
+        "aggregate_band": concentration_band(aggregate_hhi),
+        "hhi_moderate_threshold": HHI_MODERATELY_CONCENTRATED,
+        "hhi_high_threshold": HHI_HIGHLY_CONCENTRATED,
         "dominance_map": cg.dominance_map(),
         "quantum_high_value_controls": {
             commodity: cg.share_of("quantum", commodity) for commodity in ("water", "lithium")
@@ -163,9 +190,15 @@ def assess_resilience(network: HydrologicalNetwork | None = None) -> dict[str, o
     baseline = total_delivery(net)
     critical = single_route_criticality(net, baseline)
     most_critical = critical[0]
+    sequence = interdiction_sequence(net, steps=INTERDICTION_STEPS)
+    sequence_loss = sequence[-1].cumulative_loss if sequence else 0.0
     return {
         "baseline_delivery": baseline,
         "route_count": len(net.routes),
+        "interdiction_steps": len(sequence),
+        "sequence_cumulative_loss": sequence_loss,
+        "sequence_loss_frac": sequence_loss / baseline if baseline > 0.0 else 0.0,
+        "sequence_delivery_after": sequence[-1].delivery_after if sequence else baseline,
         "critical_route": f"{most_critical.source}->{most_critical.target}",
         "critical_loss": most_critical.loss,
         "critical_loss_frac": most_critical.loss_fraction,
@@ -179,7 +212,7 @@ def assess_resilience(network: HydrologicalNetwork | None = None) -> dict[str, o
                 "step_loss": entry.step_loss,
                 "cumulative_loss": entry.cumulative_loss,
             }
-            for entry in interdiction_sequence(net, steps=3)
+            for entry in sequence
         ],
     }
 

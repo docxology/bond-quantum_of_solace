@@ -105,3 +105,28 @@ class TestMinimumCut:
         cut = minimum_cut(net, "S", "T")
         assert cut.value == pytest.approx(net.max_flow("S", "T").total_flow)
         assert cut.value == pytest.approx(10.0)
+
+
+def _source_only_network() -> HydrologicalNetwork:
+    """A network whose only route runs source→source, so nothing is delivered.
+
+    ``total_delivery`` sums flows into non-source nodes; with no settlement at
+    all the baseline is exactly zero. This is the degenerate case the
+    zero-baseline guards exist for.
+    """
+    return HydrologicalNetwork(
+        aquifers=[Aquifer(name="upper", yield_rate=10.0), Aquifer(name="lower", yield_rate=5.0)],
+        routes=[Route("upper", "lower", capacity=8.0, distance_km=10.0, evaporation=0.1)],
+    )
+
+
+class TestZeroBaselineNetwork:
+    def test_total_delivery_is_zero(self):
+        assert total_delivery(_source_only_network()) == 0.0
+
+    def test_resilience_index_is_zero_not_one(self):
+        """No delivery to retain means zero resilience, not vacuous perfection."""
+        assert resilience_index(_source_only_network()) == 0.0
+
+    def test_interdiction_sequence_stops_immediately(self):
+        assert interdiction_sequence(_source_only_network(), steps=3) == []

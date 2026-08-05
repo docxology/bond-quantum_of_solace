@@ -105,8 +105,12 @@ def revenue(price: float, quantity: float) -> float:
 
 
 def consumer_surplus(price: float, quantity: float, a: float, b: float) -> float:
-    """Consumer surplus under a linear demand curve: ``(a - p)·q / 2``."""
-    intercept, slope = _require_demand_params(a, b)
+    """Consumer surplus under a linear demand curve: ``(a - p)·q / 2``.
+
+    The slope is validated but does not enter the triangle's area, which is
+    fixed by the intercept, the price and the traded quantity.
+    """
+    intercept, _slope = _require_demand_params(a, b)
     p = _require_non_negative(price, "price")
     q = _require_non_negative(quantity, "quantity")
     if p > intercept:
@@ -122,9 +126,13 @@ def monopoly_quantity(a: float, b: float, marginal_cost: float) -> float:
 
 
 def monopoly_price(a: float, b: float, marginal_cost: float) -> float:
-    """Profit-maximising price for a monopolist: ``(a + mc) / 2``."""
-    intercept, slope = _require_demand_params(a, b)
-    _ = slope
+    """Profit-maximising price for a monopolist: ``(a + mc) / 2``.
+
+    The slope ``b`` does not enter the price (it cancels between the marginal
+    revenue and marginal cost conditions) but is still validated, so an
+    ill-formed demand curve is rejected here as it is everywhere else.
+    """
+    intercept, _slope = _require_demand_params(a, b)
     mc = _require_marginal_cost(marginal_cost, intercept)
     return (intercept + mc) / 2.0
 

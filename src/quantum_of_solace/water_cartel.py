@@ -12,9 +12,15 @@ Algorithms (all deterministic, computed from supplied data):
   periods, given a restriction fraction;
 * :func:`withheld_volume` — how much a restriction subtracts from what the dam
   would otherwise have released;
-* :func:`dam_leverage` — withheld volume relative to a dam's downstream demand;
+* :func:`horizon_demand_volume` — the demand a dam serves over a whole
+  simulated horizon (the per-period rate times the period count);
+* :func:`dam_leverage` — withheld volume relative to a dam's horizon demand;
 * :func:`cartel_leverage` — the aggregate leverage of a controlling cartel over
   the whole downstream demand base.
+
+Leverage ratios are dimensionally consistent: ``downstream_demand`` is a
+per-period rate on the same time base as ``inflow``, so every ratio divides a
+horizon volume by a horizon volume and lands in ``[0, 1]``.
 
 The module imports only the standard library and carries no ``bond_api`` or
 infrastructure dependency.
@@ -31,6 +37,7 @@ __all__ = [
     "cartel_leverage",
     "dam_leverage",
     "default_dams",
+    "horizon_demand_volume",
     "run_reservoir",
     "withheld_volume",
 ]
@@ -64,8 +71,11 @@ class Dam:
         name: Unique dam identifier.
         capacity: Maximum water the reservoir can store.
         initial_storage: Stored volume at the start of the simulation.
-        inflow: Natural inflow per period (rainfall, tributaries).
-        downstream_demand: Volume of downstream demand the dam's releases serve.
+        inflow: Natural inflow **per period** (rainfall, tributaries).
+        downstream_demand: Downstream demand the dam's releases serve, **per
+            period** — the same time base as ``inflow`` and ``max_release``.
+            Leverage over a multi-period horizon therefore compares withheld
+            volume against ``downstream_demand * periods``.
         max_release: Largest release the outlet can pass per period.
         evaporation_rate: Fraction of stored water lost per period.
     """
@@ -168,13 +178,30 @@ def withheld_volume(dam: Dam, periods: int, restriction_frac: float) -> float:
 
 
 def dam_leverage(dam: Dam, periods: int, restriction_frac: float) -> float:
-    """Fraction of a dam's downstream demand the restriction can cut.
+    """Fraction of a dam's horizon demand the restriction can cut.
 
-    Zero when the dam has no downstream demand to squeeze.
+    Both sides of the ratio are horizon quantities: the withheld volume
+    accumulated over ``periods`` is compared against the demand accumulated
+    over the same ``periods`` (``downstream_demand * periods``), so the result
+    is a dimensionless share in ``[0, 1]`` rather than a period-count-inflated
+    number. Zero when the dam has no downstream demand to squeeze.
     """
-    if dam.downstream_demand <= 0.0:
+    horizon_demand = horizon_demand_volume(dam, periods)
+    if horizon_demand <= 0.0:
         return 0.0
-    return withheld_volume(dam, periods, restriction_frac) / dam.downstream_demand
+    return withheld_volume(dam, periods, restriction_frac) / horizon_demand
+
+
+def horizon_demand_volume(dam: Dam, periods: int) -> float:
+    """Total downstream demand a dam serves over ``periods`` periods.
+
+    ``Dam.downstream_demand`` is a per-period rate, so the horizon demand is
+    the rate times the number of simulated periods. This is the denominator
+    every leverage ratio in this module divides by.
+    """
+    if not isinstance(periods, int) or isinstance(periods, bool) or periods < 1:
+        raise ValueError("periods must be a positive integer")
+    return dam.downstream_demand * periods
 
 
 def cartel_leverage(
@@ -188,11 +215,15 @@ def cartel_leverage(
     For every dam the simulation runs unrestricted if the cartel does not
     control it, and at ``restriction_frac`` if it does. The aggregate leverage
     is the total withheld volume across controlled dams divided by the total
-    downstream demand across all dams.
+    downstream demand **over the same horizon** — that is, the sum of every
+    dam's per-period ``downstream_demand`` times ``periods``. Both numerator
+    and denominator are horizon volumes, so the aggregate is a share in
+    ``[0, 1]``.
 
     Returns:
-        A deterministic report dict with per-dam breakdown and an ``aggregate``
-        leverage entry.
+        A deterministic report dict with per-dam breakdown, an ``aggregate``
+        leverage share, the ``periods`` simulated, and ``horizon_demand`` (the
+        denominator, so callers can re-derive the ratio).
     """
     _require_fraction(restriction_frac, "restriction_frac")
     if not isinstance(periods, int) or isinstance(periods, bool) or periods < 1:
@@ -200,23 +231,31 @@ def cartel_leverage(
 
     per_dam: dict[str, dict[str, object]] = {}
     total_withheld = 0.0
-    total_demand = 0.0
+    horizon_demand = 0.0
     for dam in dams:
         is_controlled = dam.name in controlled
         trace = run_reservoir(dam, periods, restriction_frac if is_controlled else 0.0)
         delivered = trace.total_release()
         withheld = withheld_volume(dam, periods, restriction_frac) if is_controlled else 0.0
+        dam_horizon_demand = horizon_demand_volume(dam, periods)
         per_dam[dam.name] = {
             "controlled": is_controlled,
             "delivered_volume": delivered,
             "withheld_volume": withheld,
-            "leverage": withheld / dam.downstream_demand if dam.downstream_demand > 0.0 else 0.0,
+            "horizon_demand": dam_horizon_demand,
+            "leverage": withheld / dam_horizon_demand if dam_horizon_demand > 0.0 else 0.0,
         }
-        total_demand += dam.downstream_demand
+        horizon_demand += dam_horizon_demand
         if is_controlled:
             total_withheld += withheld
-    aggregate = total_withheld / total_demand if total_demand > 0.0 else 0.0
-    return {"per_dam": per_dam, "aggregate": aggregate, "periods": periods}
+    aggregate = total_withheld / horizon_demand if horizon_demand > 0.0 else 0.0
+    return {
+        "per_dam": per_dam,
+        "aggregate": aggregate,
+        "periods": periods,
+        "horizon_demand": horizon_demand,
+        "withheld_volume": total_withheld,
+    }
 
 
 def default_dams() -> list[Dam]:

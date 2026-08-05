@@ -13,6 +13,11 @@ conditions:
 
 primary_metric:
   name: "aggregate cartel leverage"
+  definition: >-
+    Total volume withheld by the controlled dams over the horizon, divided by
+    the demand the whole fleet serves over the same horizon
+    (sum of per-period downstream_demand x periods). Both sides are horizon
+    volumes, so the metric is a dimensionless share in [0, 1].
   source: "quantum_of_solace.analysis.assess_water_cartel"
 
 secondary_metrics:
@@ -20,6 +25,12 @@ secondary_metrics:
     source: "quantum_of_solace.analysis.assess_hydrology"
   - name: "portfolio-mean HHI"
     source: "quantum_of_solace.analysis.assess_cartel_graph"
+  - name: "scarcity price rise fraction"
+    source: "quantum_of_solace.analysis.assess_pricing"
+  - name: "single-cut resilience index"
+    source: "quantum_of_solace.analysis.assess_resilience"
+  - name: "leading-actor Shapley value"
+    source: "quantum_of_solace.analysis.assess_shapley"
 
 expected_figures:
   - output/figures/hydrology_settlement_delivery.png

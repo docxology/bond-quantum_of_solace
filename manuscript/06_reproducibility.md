@@ -3,9 +3,11 @@
 ## Provenance
 
 Every `MissionOutcome` from `quantum_of_solace/mission.py` carries a
-`Provenance` record: package version, a fixed seed (0 — the film uses no
-randomness), and a canonical SHA-256 input hash of the full assessment. The
-same input always reproduces the same hash and the same results.
+`Provenance` record: package version, the fixed seed {{MISSION_SEED}} (the film
+uses no randomness), and a canonical SHA-256 input hash of the full assessment,
+taken over a key-sorted JSON serialisation so the digest does not depend on
+dictionary ordering. The same input always reproduces the same hash and the
+same results.
 
 ## Regeneration pipeline
 
@@ -22,7 +24,24 @@ The verification gate is:
 
 ```bash
 uv run pytest tests/ --cov=src --cov-fail-under=90
+uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/ tests/
+uv run mypy src/ scripts/
 ```
+
+The suite is real-computation only: no mock framework appears anywhere in
+`tests/`, so a passing assertion means the algorithm produced the right number
+rather than that a call signature was intercepted.
+
+## Manuscript–code binding
+
+Two live tests keep this document honest. One re-derives the token map by
+calling `generate_variables()` and fails if any token used in a numbered
+section is not produced, binding prose to the generator rather than to a
+possibly stale artifact under `output/`; it also asserts the scanned section
+set is non-empty, so an empty scan fails instead of passing vacuously. The
+other scans the results section for bare decimal numerals after the tokens are
+masked out, so a hand-authored metric that escapes the injection pipeline is
+caught at test time.
 
 ## Configuration hash
 

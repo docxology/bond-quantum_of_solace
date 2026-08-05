@@ -41,6 +41,8 @@ from bond_api.protocol import (
 from bond_api.registry import GadgetRegistry
 
 from quantum_of_solace.analysis import (
+    INTERDICTION_STEPS,
+    RESTRICTION_FRAC,
     assess_cartel_graph,
     assess_hydrology,
     assess_pricing,
@@ -50,14 +52,14 @@ from quantum_of_solace.analysis import (
     run_quantum_assessment,
 )
 
-__all__ = ["GADGET_REGISTRY", "QUANTUM_CODENAME", "MissionProvider"]
+__all__ = ["GADGET_REGISTRY", "MISSION_SEED", "QUANTUM_CODENAME", "MissionProvider"]
 
 #: The film's mission codename.
 QUANTUM_CODENAME = "QUANTUM"
 #: Package version reported in provenance.
 _PACKAGE_VERSION = "0.1.0"
 #: Deterministic RNG seed (0 = no randomness; this film uses none).
-_SEED = 0
+MISSION_SEED = 0
 
 #: The assessment subsystem gadgets the film registers for its slug.
 GADGET_REGISTRY = GadgetRegistry()
@@ -81,7 +83,7 @@ def _canonical_hash(payload: object) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-class MissionProvider:  # noqa: N801 — class name fixed by the discovery contract
+class MissionProvider:
     """Deterministic ``bond_api.MissionProvider`` for the QUANTUM film.
 
     The provider adapts the pure water/cartel domain models to the frozen
@@ -148,7 +150,10 @@ class MissionProvider:  # noqa: N801 — class name fixed by the discovery contr
                     detail=f"border_town {delivery['border_town']:.1f}, "
                     f"valley_compact {delivery['valley_compact']:.1f} max units/period",
                 ),
-                Finding(label="cartel_leverage", detail=f"aggregate {aggregate_leverage:.3f}"),
+                Finding(
+                    label="cartel_leverage",
+                    detail=f"aggregate {aggregate_leverage:.3f} of horizon demand withheld",
+                ),
                 Finding(label="aggregate_hhi", detail=f"{aggregate_hhi:.1f} points"),
                 Finding(
                     label="scarcity_price",
@@ -171,13 +176,13 @@ class MissionProvider:  # noqa: N801 — class name fixed by the discovery contr
         return MissionPlan(
             steps=(
                 Step(name="hydrology", action="assess_hydrology", params={"network": "default"}),
-                Step(name="water_cartel", action="assess_water_cartel", params={"restriction": 0.5}),
+                Step(name="water_cartel", action="assess_water_cartel", params={"restriction": RESTRICTION_FRAC}),
                 Step(name="cartel_graph", action="assess_cartel_graph", params={"model": "default"}),
                 Step(name="pricing", action="assess_pricing", params={"demand": "linear"}),
-                Step(name="resilience", action="assess_resilience", params={"steps": 3}),
+                Step(name="resilience", action="assess_resilience", params={"steps": INTERDICTION_STEPS}),
                 Step(name="shapley", action="assess_shapley", params={"weights": "canonical"}),
                 Step(name="assemble", action="run_quantum_assessment", params={"objectives": len(brief.objectives)}),
-                Step(name="provenance", action="hash_inputs", params={"seed": _SEED}),
+                Step(name="provenance", action="hash_inputs", params={"seed": MISSION_SEED}),
             )
         )
 
@@ -196,7 +201,7 @@ class MissionProvider:  # noqa: N801 — class name fixed by the discovery contr
             results=results,
             provenance=Provenance(
                 package_version=_PACKAGE_VERSION,
-                seed=_SEED,
+                seed=MISSION_SEED,
                 input_hash=_canonical_hash(assessment),
                 wall_time_s=0.0,
             ),
@@ -206,7 +211,7 @@ class MissionProvider:  # noqa: N801 — class name fixed by the discovery contr
         """Summarise the mission and record the QUANTUM standing lessons."""
         lessons = (
             "evaporation hollows out delivered water — routing must minimise effective loss",
-            "a cartel holding a minority of dams can still squeeze a large share of demand",
+            "a cartel holding a minority of dams still withholds a sizeable share of horizon demand",
             "multi-resource concentration (HHI) exposes leverage that single-commodity view misses",
             "water is sharply inelastic, so even a modest supply cut raises price far more than volume",
             "no desert aqueduct is redundant — every single cut costs delivery, making the network fragile",

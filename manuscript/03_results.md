@@ -7,8 +7,10 @@ assessment — they are measured, not authored.
 ## 1. Desert water network resilience
 
 The canonical network holds {{HYDRO_TOTAL_SUPPLY}} units/period of aquifer
-yield across {{HYDRO_NODE_COUNT}} nodes and {{HYDRO_ROUTE_COUNT}} routes. Under
-Edmonds–Karp maximum flow the two border settlements draw up to
+yield across {{HYDRO_NODE_COUNT}} nodes and {{HYDRO_ROUTE_COUNT}} routes —
+{{HYDRO_AQUIFER_COUNT}} aquifers feeding {{HYDRO_SETTLEMENT_COUNT}} settlements
+({{HYDRO_SETTLEMENTS}}). Under Edmonds–Karp maximum flow the border settlements
+draw up to
 {{RESULT_BORDER_DELIVERY}} (border_town) and {{RESULT_VALLEY_DELIVERY}}
 (valley_compact) delivered units/period. Evaporation is the dominant loss;
 shortest-effort routing counteracts it. @fig:delivery shows each settlement's
@@ -18,11 +20,16 @@ maximum delivered water.
 
 ## 2. Cartel leverage over water rights
 
-With a 50% restriction on its two controlled dams, the cartel achieves an
-aggregate leverage of **{{RESULT_AGG_LEVERAGE}}** — that is, a withheld volume
-equal to more than the entire downstream demand base over the simulated
-horizon, revealing how a minority ownership of dams converts into outsized
-squeeze. @fig:leverage reports leverage per dam; controlled dams are red.
+With a {{CARTEL_RESTRICTION_PCT}}% restriction on the
+{{CARTEL_CONTROLLED_DAMS}} dams it controls out of a fleet of
+{{CARTEL_DAM_COUNT}}, the cartel achieves an aggregate leverage of
+**{{RESULT_AGG_LEVERAGE}}** over the {{CARTEL_PERIODS}}-period horizon: it
+withholds {{CARTEL_WITHHELD_VOLUME}} units against a horizon demand of
+{{CARTEL_HORIZON_DEMAND}}, or {{RESULT_AGG_LEVERAGE_PCT}}% of everything the
+fleet was there to serve. Owning a minority of the dams is enough to remove a
+quarter of the region's water. Both sides of that ratio are horizon volumes, so
+the figure is a genuine share and does not inflate with the length of the
+simulation. @fig:leverage reports leverage per dam; controlled dams are red.
 
 ![Cartel leverage by dam](../output/figures/water_cartel_leverage.png){#fig:leverage}
 
@@ -30,8 +37,11 @@ squeeze. @fig:leverage reports leverage per dam; controlled dams are red.
 
 Across {{CARTEL_COMMODITIES}}, control is concentrated: water HHI
 {{RESULT_WATER_HHI}} and lithium HHI {{RESULT_LITHIUM_HHI}} both sit well above
-the 2500 "moderately concentrated" threshold, and the portfolio-mean HHI is
-**{{RESULT_AGG_HHI}}** points. @fig:hhi plots concentration per commodity, and
+the {{HHI_HIGH_THRESHOLD}}-point line above which the U.S. Horizontal Merger
+Guidelines [@doj2010merger] call a market *highly concentrated*. The
+portfolio-mean HHI is **{{RESULT_AGG_HHI}}** points, which
+`concentration_band` classifies as {{RESULT_AGG_HHI_BAND}}. @fig:hhi plots
+concentration per commodity, and
 the dominance map shows the shadow cartel holding the largest share of water
 and lithium while a rival syndicate and a state utility split copper and grain.
 
@@ -60,8 +70,10 @@ no single aqueduct is redundant — and a single cut retains only
 **{{RESIL_INDEX}}** of baseline delivery. The most critical single route,
 {{RESIL_CRITICAL_ROUTE}}, costs {{RESIL_CRITICAL_LOSS}} units ({{RESIL_CRITICAL_FRAC}}%)
 of the {{RESIL_BASELINE}}-unit baseline if lost. @fig:interdict shows the greedy
-worst-case interdiction sequence, in which three well-chosen cuts collapse
-delivery almost entirely.
+worst-case interdiction sequence: {{RESIL_SEQ_STEPS}} well-chosen cuts remove
+{{RESIL_SEQ_LOSS}} units, {{RESIL_SEQ_LOSS_FRAC}}% of baseline delivery,
+leaving {{RESIL_SEQ_DELIVERY_AFTER}} units still flowing — a majority of supply
+lost, but not a total collapse.
 
 ![Greedy worst-case aqueduct interdiction](../output/figures/resilience_route_criticality.png){#fig:interdict}
 

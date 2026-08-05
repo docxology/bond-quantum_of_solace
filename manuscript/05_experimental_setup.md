@@ -1,7 +1,8 @@
 # Experimental Setup
 
 This package is a BOND-suite film repository with a `src/` layout, a local-only
-git working tree, and ≥90% branch coverage enforced on `src/`.
+git working tree, and a line-and-branch coverage floor enforced on `src/` by
+the package's own pytest gate.
 
 ## Software environment
 
@@ -10,26 +11,44 @@ git working tree, and ≥90% branch coverage enforced on `src/`.
 * `bond-api` (the frozen protocol) as a path dependency
 * `pytest`, `pytest-cov`, `mypy`, `ruff` as dev dependencies
 
+Lint and format settings are declared in this package's own `pyproject.toml`,
+so a standalone clone lints identically to the in-suite checkout.
+
 ## Problem instances
 
-All models run on fixed, deterministic instances documented in each module's
-`default_*` factory:
+All models run on fixed, deterministic instances built by each module's
+`default_*` factory. Every parameter quoted below is a manuscript token read
+back out of the running assessment, not a number transcribed into prose:
 
-* `default_network()` — three aquifers ({{HYDRO_TOTAL_SUPPLY}} units/period
-  total) routing to two settlements over six evaporative routes.
-* `default_dams()` — three reservoirs with matching downstream demands; the
-  cartel controls two of them at a 50% restriction over twelve periods.
-* `default_cartel()` — three actors controlling {{CARTEL_COMMODITIES}} with
-  known shares; the shadow cartel leads water and lithium.
-* `default_demand()` — a `a = 100`, `b = 0.25` linear demand curve with a
-  marginal delivery cost of 10; baseline vs restricted supply is measured from
-  the dam-fleet simulation, not assumed.
-* `default_weights()` — canonical Shapley commodity weights (water 3, lithium 2,
-  copper 1, grain 1) over the diminishing-returns control value function.
+* `default_network()` — {{HYDRO_AQUIFER_COUNT}} aquifers
+  ({{HYDRO_TOTAL_SUPPLY}} units/period total) routing to
+  {{HYDRO_SETTLEMENT_COUNT}} settlements ({{HYDRO_SETTLEMENTS}}) over
+  {{HYDRO_ROUTE_COUNT}} evaporative routes, {{HYDRO_NODE_COUNT}} nodes in all.
+* `default_dams()` — {{CARTEL_DAM_COUNT}} reservoirs with per-period downstream
+  demands; the cartel controls {{CARTEL_CONTROLLED_DAMS}} of them at a
+  {{CARTEL_RESTRICTION_PCT}}% restriction over {{CARTEL_PERIODS}} periods,
+  giving a horizon demand base of {{CARTEL_HORIZON_DEMAND}} units.
+* `default_cartel()` — {{CARTEL_ACTOR_COUNT}} actors ({{CARTEL_ACTORS}})
+  controlling {{CARTEL_COMMODITIES}} with known shares; the shadow cartel leads
+  water and lithium.
+* `default_demand()` — a linear inverse demand curve with intercept
+  `a = {{PRICE_DEMAND_A}}` and slope `b = {{PRICE_DEMAND_B}}`, at a constant
+  marginal delivery cost of {{PRICE_MARGINAL_COST}}. Baseline and restricted
+  supply are *measured* from the dam-fleet simulation
+  ({{PRICE_SUPPLY_BASELINE}} → {{PRICE_SUPPLY_RESTRICTED}} units/period), not
+  assumed.
+* `default_weights()` — canonical Shapley commodity weights
+  ({{SHAPLEY_WEIGHTS}}) over the diminishing-returns control value function.
+* `INTERDICTION_STEPS` — {{RESIL_SEQ_STEPS}} cuts in the canonical greedy
+  worst-case interdiction sequence.
 
-## Reproducibility
+## Determinism
 
-Result tokens (delivery, leverage, HHI) are computed by `run_quantum_assessment()`
-and injected into the manuscript. The generation timestamp is {{GENERATION_TIMESTAMP}}
-(from the config date) so hydration is deterministic. Migration between Python
-versions is possible without changing any numeric result.
+Result tokens are computed by `run_quantum_assessment()` and injected into the
+manuscript. The mission seed is {{MISSION_SEED}} and no model draws a random
+number, so seeding is a formality rather than a control. The generation
+timestamp is {{GENERATION_TIMESTAMP}}, taken from the config date rather than
+the wall clock, so hydration is reproducible. The exact-enumeration Shapley and
+Banzhaf solvers evaluate all `2^n` coalitions rather than sampling, so power
+indices carry no estimation error. Migration between Python versions leaves
+every numeric result unchanged.

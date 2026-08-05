@@ -2,7 +2,13 @@
 
 import pytest
 
-from quantum_of_solace.cartel_graph import CommodityCartelGraph, default_cartel
+from quantum_of_solace.cartel_graph import (
+    HHI_HIGHLY_CONCENTRATED,
+    HHI_MODERATELY_CONCENTRATED,
+    CommodityCartelGraph,
+    concentration_band,
+    default_cartel,
+)
 
 
 class TestCommodityCartelGraphInit:
@@ -118,3 +124,46 @@ class TestDefaultCartel:
         assert "quantum" in cartel.actors
         assert "lithium" in cartel.commodities
         assert cartel.dominance_map()["water"] == "quantum"
+
+
+class TestConcentrationBand:
+    """The Merger-Guidelines concentration bands the manuscript cites."""
+
+    def test_unconcentrated(self):
+        assert concentration_band(0.0) == "unconcentrated"
+        assert concentration_band(HHI_MODERATELY_CONCENTRATED - 0.1) == "unconcentrated"
+
+    def test_moderately_concentrated_is_the_closed_middle_band(self):
+        assert concentration_band(HHI_MODERATELY_CONCENTRATED) == "moderately concentrated"
+        assert concentration_band(2000.0) == "moderately concentrated"
+        assert concentration_band(HHI_HIGHLY_CONCENTRATED) == "moderately concentrated"
+
+    def test_highly_concentrated_above_the_upper_threshold(self):
+        assert concentration_band(HHI_HIGHLY_CONCENTRATED + 0.1) == "highly concentrated"
+        assert concentration_band(10000.0) == "highly concentrated"
+
+    def test_thresholds_are_ordered(self):
+        assert HHI_MODERATELY_CONCENTRATED < HHI_HIGHLY_CONCENTRATED
+
+    def test_rejects_bad_input(self):
+        with pytest.raises(ValueError, match="non-negative"):
+            concentration_band(-1.0)
+        with pytest.raises(ValueError, match="non-negative"):
+            concentration_band(True)
+        with pytest.raises(ValueError, match="non-negative"):
+            concentration_band("2500")  # type: ignore[arg-type]
+
+    def test_default_cartel_is_highly_concentrated_on_every_commodity(self):
+        cartel = default_cartel()
+        for commodity in cartel.commodities:
+            assert concentration_band(cartel.hhi(commodity)) == "highly concentrated"
+
+
+class TestShareValidation:
+    def test_non_numeric_share_rejected(self):
+        with pytest.raises(ValueError, match="non-boolean number"):
+            CommodityCartelGraph({"a": {"water": "0.5"}})  # type: ignore[dict-item]
+
+    def test_boolean_share_rejected(self):
+        with pytest.raises(ValueError, match="non-boolean number"):
+            CommodityCartelGraph({"a": {"water": True}})

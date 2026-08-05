@@ -100,3 +100,18 @@ class TestWeights:
         cartel = default_cartel()
         with pytest.raises(ValueError):
             shapley_value(cartel, {"water": 3.0})  # missing lithium/copper/grain
+
+
+class TestDegenerateGame:
+    """A game whose grand coalition is worthless yields zero power, not NaN."""
+
+    def test_banzhaf_returns_zeros_when_no_actor_contributes(self):
+        cartel = CommodityCartelGraph({"solo": {"water": 0.0}, "other": {"water": 0.0}})
+        assert coalition_value(frozenset(cartel.actors), cartel) == 0.0
+        power = banzhaf_power(cartel)
+        assert power == {"solo": 0.0, "other": 0.0}
+
+    def test_shapley_values_are_zero_for_the_same_game(self):
+        cartel = CommodityCartelGraph({"solo": {"water": 0.0}, "other": {"water": 0.0}})
+        assert shapley_value(cartel) == {"solo": 0.0, "other": 0.0}
+        assert dominance_gap(cartel) == 0.0

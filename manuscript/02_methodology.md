@@ -1,8 +1,12 @@
 # Methodology
 
-We implement three deterministic models. All are pure functions of fixed
-problem data; there is no random number generation and no dependence on the
-wall clock, so a regeneration reproduces identical output.
+We implement six deterministic models, one per module of the pure domain core.
+All are pure functions of fixed problem data; there is no random number
+generation and no dependence on the wall clock, so a regeneration reproduces
+identical output. The sections below follow the dependency order in which
+`quantum_of_solace/analysis.py` composes them: hydrology and reservoir
+operation first, then the concentration, pricing, interdiction and power models
+that read from them.
 
 ## Desert hydrology (`quantum_of_solace/hydrology.py`)
 
@@ -24,9 +28,17 @@ Three algorithms operate on the resulting network:
 A dam has storage capacity, initial storage, natural inflow, a downstream
 demand, a maximum release and an evaporation rate. `run_reservoir` simulates
 mass balance period by period; a *restriction fraction* withholds that share of
-each period's otherwise-released water. Leverage for a dam is the withheld
-volume relative to its downstream demand, and aggregate cartel leverage is
-total withheld volume across the controlled dams divided by total demand.
+each period's otherwise-released water.
+
+Leverage is defined so that it is dimensionally consistent. Inflow, maximum
+release and downstream demand are all **per-period rates**, so a leverage ratio
+must divide a horizon volume by a horizon volume:
+:func:`horizon_demand_volume` returns `downstream_demand * periods`,
+:func:`dam_leverage` divides a dam's withheld volume by it, and
+:func:`cartel_leverage` divides the total withheld volume across the controlled
+dams by the horizon demand of the whole fleet. Every leverage figure in this
+manuscript is therefore a share in the unit interval, and it does not change if
+the simulated horizon is lengthened at a steady release.
 
 ## Commodity-cartel graph (`quantum_of_solace/cartel_graph.py`)
 
@@ -35,6 +47,13 @@ commodity. Concentration is the Herfindahl–Hirschman index in percentage
 points, ``sum((share * 100)²)``, reported per commodity and aggregated as the
 portfolio mean. Dominance, concentration ratios for the top-k holders, and an
 actor's portfolio diversification complete the picture.
+
+:func:`concentration_band` classifies an index value against the bands of the
+U.S. Horizontal Merger Guidelines [@doj2010merger]: *unconcentrated* below
+{{HHI_MODERATE_THRESHOLD}} points, *moderately concentrated* up to
+{{HHI_HIGH_THRESHOLD}} points, and *highly concentrated* above it. The
+classification lives in code so the manuscript never has to assert which side
+of a threshold a measurement falls on.
 
 ## Water scarcity pricing (`quantum_of_solace/pricing.py`)
 
@@ -74,5 +93,9 @@ holds: the values sum to the grand-coalition value), :func:`banzhaf_power`
 
 `quantum_of_solace/mission.py` adapts the six models to the frozen `bond_api`
 protocol: `brief`, `recon`, `plan`, `execute` and `debrief`, with provenance
-carrying a canonical input hash and a fixed seed. The domain modules import
+carrying a canonical SHA-256 input hash and the fixed seed {{MISSION_SEED}}
+(the film's models make no random draws at all). The adapter also registers the
+six assessment entry points, plus the composed full assessment, in a
+module-level `GadgetRegistry` under the package slug, which is how the
+coordinator and CLI reach them across packages. The domain modules import
 nothing from `bond_api`, so they remain standalone.

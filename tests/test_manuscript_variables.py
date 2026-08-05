@@ -46,18 +46,61 @@ class TestGenerateVariables:
         variables = generate_variables()
         assert variables["BOND_CODENAME"] == "QUANTUM"
         assert variables["RESULT_BORDER_DELIVERY"] == "65.0"
-        assert variables["RESULT_AGG_LEVERAGE"].startswith("3.")
         assert variables["RESULT_AGG_HHI"] == "3925.0"
         assert "water" in variables["CARTEL_COMMODITIES"]
 
+    def test_leverage_token_is_a_horizon_share(self):
+        """Aggregate leverage is a share in [0, 1], not a period-inflated ratio."""
+        variables = generate_variables()
+        leverage = float(variables["RESULT_AGG_LEVERAGE"])
+        assert 0.0 < leverage < 1.0
+        # The token must equal withheld volume / horizon demand exactly.
+        withheld = float(variables["CARTEL_WITHHELD_VOLUME"])
+        horizon_demand = float(variables["CARTEL_HORIZON_DEMAND"])
+        assert withheld / horizon_demand == pytest.approx(leverage, abs=5e-4)
+        assert float(variables["RESULT_AGG_LEVERAGE_PCT"]) == pytest.approx(leverage * 100.0, abs=0.05)
+
     def test_deepened_tokens(self):
         variables = generate_variables()
-        assert variables["PRICE_RESTRICTED"] > variables["PRICE_BASELINE"]
+        # Numeric comparison, not lexicographic string comparison.
+        assert float(variables["PRICE_RESTRICTED"]) > float(variables["PRICE_BASELINE"])
         assert "highland_aquifer->border_town" in variables["RESIL_CRITICAL_ROUTE"]
         assert variables["RESIL_BASELINE"] == "120.0"
         assert variables["SHAPLEY_TOP_ACTOR"] == "quantum"
         assert variables["SHAPLEY_TOTAL"] == "7.0"
         assert variables["PRICE_DWL"] == "4050.0"
+
+    def test_setup_parameter_tokens(self):
+        """Setup parameters the manuscript cites are tokens, not prose numerals."""
+        variables = generate_variables()
+        assert variables["HYDRO_AQUIFER_COUNT"] == "3"
+        assert variables["HYDRO_SETTLEMENT_COUNT"] == "2"
+        assert variables["CARTEL_DAM_COUNT"] == "3"
+        assert variables["CARTEL_CONTROLLED_DAMS"] == "2"
+        assert variables["CARTEL_RESTRICTION_PCT"] == "50"
+        assert variables["CARTEL_PERIODS"] == "12"
+        assert variables["PRICE_DEMAND_A"] == "100"
+        assert variables["PRICE_DEMAND_B"] == "0.25"
+        assert variables["PRICE_MARGINAL_COST"] == "10"
+        assert variables["MISSION_SEED"] == "0"
+        assert variables["SHAPLEY_WEIGHTS"] == "copper 1, grain 1, lithium 2, water 3"
+
+    def test_hhi_band_tokens_match_the_measured_value(self):
+        """The concentration band is classified in code, not asserted in prose."""
+        variables = generate_variables()
+        assert float(variables["RESULT_AGG_HHI"]) > float(variables["HHI_HIGH_THRESHOLD"])
+        assert variables["RESULT_AGG_HHI_BAND"] == "highly concentrated"
+        assert variables["HHI_HIGH_THRESHOLD"] == "2500"
+        assert variables["HHI_MODERATE_THRESHOLD"] == "1500"
+
+    def test_interdiction_sequence_tokens(self):
+        """The interdiction narrative's step count and loss share are computed."""
+        variables = generate_variables()
+        assert variables["RESIL_SEQ_STEPS"] == "3"
+        loss = float(variables["RESIL_SEQ_LOSS"])
+        baseline = float(variables["RESIL_BASELINE"])
+        assert float(variables["RESIL_SEQ_LOSS_FRAC"]) == pytest.approx(100.0 * loss / baseline, abs=0.05)
+        assert float(variables["RESIL_SEQ_DELIVERY_AFTER"]) == pytest.approx(baseline - loss, abs=0.05)
 
     def test_assessment_and_now_override(self, tmp_path: Path):
         config_path = _write_config(tmp_path / "config.yaml")

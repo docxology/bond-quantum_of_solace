@@ -16,7 +16,7 @@ from typing import Any, cast
 import yaml
 
 from quantum_of_solace.analysis import run_quantum_assessment
-from quantum_of_solace.mission import QUANTUM_CODENAME
+from quantum_of_solace.mission import MISSION_SEED, QUANTUM_CODENAME
 
 __all__ = ["load_mission_config", "generate_variables"]
 
@@ -71,6 +71,7 @@ def generate_variables(
     hhi = cast("dict[str, float]", cartel["hhi_by_commodity"])
     shapley_values = cast("dict[str, float]", shapley["shapley"])
     banzhaf_values = cast("dict[str, float]", shapley["banzhaf"])
+    shapley_weights = cast("dict[str, float]", shapley["weights"])
 
     return {
         "BOND_IDENTITY": cast("str", paper.get("title", "Quantum of Solace")),
@@ -81,17 +82,32 @@ def generate_variables(
         "CONFIG_DATE": date_stamp,
         "PYTHON_VERSION": _python_version(),
         "GENERATION_TIMESTAMP": date_stamp,
+        "MISSION_SEED": str(MISSION_SEED),
         "HYDRO_TOTAL_SUPPLY": _fmt(cast("float", hydrology["total_supply"]), 1),
         "HYDRO_NODE_COUNT": str(hydrology["node_count"]),
         "HYDRO_ROUTE_COUNT": str(hydrology["route_count"]),
+        "HYDRO_AQUIFER_COUNT": str(hydrology["aquifer_count"]),
+        "HYDRO_SETTLEMENT_COUNT": str(hydrology["settlement_count"]),
+        "HYDRO_SETTLEMENTS": ", ".join(cast("list[str]", hydrology["settlements"])),
         "RESULT_BORDER_DELIVERY": _fmt(delivery["border_town"], 1),
         "RESULT_VALLEY_DELIVERY": _fmt(delivery["valley_compact"], 1),
         "RESULT_AGG_LEVERAGE": _fmt(cast("float", water["aggregate_leverage"]), 3),
+        "RESULT_AGG_LEVERAGE_PCT": _fmt(cast("float", water["aggregate_leverage"]) * 100.0, 1),
+        "CARTEL_RESTRICTION_PCT": _fmt(cast("float", water["restriction_frac"]) * 100.0, 0),
+        "CARTEL_PERIODS": str(water["periods"]),
+        "CARTEL_DAM_COUNT": str(water["dam_count"]),
+        "CARTEL_CONTROLLED_DAMS": str(water["controlled_dam_count"]),
+        "CARTEL_HORIZON_DEMAND": _fmt(cast("float", water["horizon_demand"]), 1),
+        "CARTEL_WITHHELD_VOLUME": _fmt(cast("float", water["withheld_volume"]), 1),
         "RESULT_AGG_HHI": _fmt(cast("float", cartel["aggregate_hhi"]), 1),
+        "RESULT_AGG_HHI_BAND": cast("str", cartel["aggregate_band"]),
         "RESULT_WATER_HHI": _fmt(hhi["water"], 1),
         "RESULT_LITHIUM_HHI": _fmt(hhi["lithium"], 1),
+        "HHI_HIGH_THRESHOLD": _fmt(cast("float", cartel["hhi_high_threshold"]), 0),
+        "HHI_MODERATE_THRESHOLD": _fmt(cast("float", cartel["hhi_moderate_threshold"]), 0),
         "CARTEL_COMMODITIES": ", ".join(cast("list[str]", cartel["commodities"])),
         "CARTEL_ACTORS": ", ".join(cast("list[str]", cartel["actors"])),
+        "CARTEL_ACTOR_COUNT": str(cartel["actor_count"]),
         "PRICE_SUPPLY_BASELINE": _fmt(cast("float", pricing["supply_baseline"]), 1),
         "PRICE_SUPPLY_RESTRICTED": _fmt(cast("float", pricing["supply_restricted"]), 1),
         "PRICE_BASELINE": _fmt(cast("float", pricing["baseline_price"]), 1),
@@ -99,6 +115,9 @@ def generate_variables(
         "PRICE_RISE": _fmt(cast("float", pricing["price_rise_frac"]) * 100.0, 1),
         "PRICE_SCARCITY_RENT": _fmt(cast("float", pricing["scarcity_rent"]), 1),
         "PRICE_ELASTICITY": _fmt(cast("float", pricing["elasticity"]), 3),
+        "PRICE_DEMAND_A": _fmt(cast("float", pricing["a"]), 0),
+        "PRICE_DEMAND_B": _fmt(cast("float", pricing["b"]), 2),
+        "PRICE_MARGINAL_COST": _fmt(cast("float", pricing["marginal_cost"]), 0),
         "PRICE_MONOPOLY": _fmt(cast("float", pricing["monopoly_price"]), 1),
         "PRICE_MONOPOLY_Q": _fmt(cast("float", pricing["monopoly_quantity"]), 1),
         "PRICE_DWL": _fmt(cast("float", pricing["deadweight_loss"]), 1),
@@ -108,6 +127,10 @@ def generate_variables(
         "RESIL_CRITICAL_FRAC": _fmt(cast("float", resilience["critical_loss_frac"]) * 100.0, 1),
         "RESIL_INDEX": _fmt(cast("float", resilience["resilience_index"]), 3),
         "RESIL_CRITICAL_COUNT": str(resilience["critical_route_count"]),
+        "RESIL_SEQ_STEPS": str(resilience["interdiction_steps"]),
+        "RESIL_SEQ_LOSS": _fmt(cast("float", resilience["sequence_cumulative_loss"]), 1),
+        "RESIL_SEQ_LOSS_FRAC": _fmt(cast("float", resilience["sequence_loss_frac"]) * 100.0, 1),
+        "RESIL_SEQ_DELIVERY_AFTER": _fmt(cast("float", resilience["sequence_delivery_after"]), 1),
         "SHAPLEY_TOP_ACTOR": cast("str", shapley["top_actor"]),
         "SHAPLEY_QUANTUM": _fmt(shapley_values["quantum"], 3),
         "SHAPLEY_RIVAL": _fmt(shapley_values["rival_syndicate"], 3),
@@ -115,6 +138,9 @@ def generate_variables(
         "SHAPLEY_GAP": _fmt(cast("float", shapley["dominance_gap"]), 3),
         "SHAPLEY_TOTAL": _fmt(cast("float", shapley["grand_coalition_value"]), 1),
         "SHAPLEY_BANZHAF_QUANTUM": _fmt(banzhaf_values["quantum"], 3),
+        "SHAPLEY_WEIGHTS": ", ".join(
+            f"{commodity} {weight:g}" for commodity, weight in sorted(shapley_weights.items())
+        ),
     }
 
 

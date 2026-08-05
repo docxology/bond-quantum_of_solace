@@ -11,14 +11,22 @@ film.
 
 The headline result is that leverage is *systemic and convertible*: a cartel
 with minority dam ownership and a lead in high-value commodities commands
-disproportionate influence over downstream demand (aggregate leverage
-{{RESULT_AGG_LEVERAGE}}), over market concentration (portfolio HHI
-{{RESULT_AGG_HHI}}), over price (a {{PRICE_RISE}}% scarcity-price rise and a
-scarcity rent of {{PRICE_SCARCITY_RENT}}), and over the network (every route
-critical, single-cut retention {{RESIL_INDEX}}). Its Shapley share of the
-commodity portfolio's value, {{SHAPLEY_QUANTUM}} of {{SHAPLEY_TOTAL}}, confirms
-that power concentrates in the leading actor. The methods — mass balance,
-Dijkstra, Edmonds–Karp, reservoir simulation, the Herfindahl–Hirschman index,
-linear-demand monopoly economics, interdiction criticality, and exact Shapley
-and Banzhaf indices — are all standard, all real, and all reproduced
-deterministically. No metric in this manuscript is hand-authored.
+disproportionate influence over downstream demand
+({{RESULT_AGG_LEVERAGE_PCT}}% of the fleet's horizon demand withheld from
+{{CARTEL_CONTROLLED_DAMS}} of {{CARTEL_DAM_COUNT}} dams), over market
+concentration (a {{RESULT_AGG_HHI_BAND}} portfolio at {{RESULT_AGG_HHI}}
+points), over price (a {{PRICE_RISE}}% scarcity-price rise and a scarcity rent
+of {{PRICE_SCARCITY_RENT}}), and over the network (every route critical,
+single-cut retention {{RESIL_INDEX}}). Its Shapley share of the commodity
+portfolio's value, {{SHAPLEY_QUANTUM}} of {{SHAPLEY_TOTAL}}, confirms that
+power concentrates in the leading actor.
+
+The disproportion is the point, and it is quantified rather than asserted: a
+partial holding converts into a share of regional supply several times its
+size, and the same actor's exact Shapley value exceeds the runner-up's by
+{{SHAPLEY_GAP}}. The methods — mass balance, Dijkstra, Edmonds–Karp, reservoir
+simulation, the Herfindahl–Hirschman index with its published concentration
+bands, linear-demand monopoly economics, greedy network interdiction, and exact
+Shapley and Banzhaf indices — are all standard, all real, and all reproduced
+deterministically. No metric in this manuscript is hand-authored; a test fails
+if one appears.

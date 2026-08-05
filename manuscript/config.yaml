@@ -4,7 +4,7 @@
 
 paper:
   title: "Quantum of Solace: QUANTUM — Special-Agent Mission Software"
-  subtitle: "Water-Rights Cartels, Desert Hydrology, and Multi-Resource Commodity Control"
+  subtitle: "Water Cartels, Desert Hydrology, Scarcity Pricing, Aqueduct Interdiction, and Cooperative Power"
   version: "0.1.0"
   date: "2026-08-04"
 
@@ -20,14 +20,18 @@ publication:
   journal: "BOND Mission Software Series"
   year: "2026"
 
+# Every keyword names something this package actually computes; do not add a
+# term unless a module in src/quantum_of_solace/ implements it.
 keywords:
   - "water-rights cartel"
   - "desert hydrology"
   - "commodity-cartel graph"
-  - "mutual information"
   - "herfindahl-hirschman concentration"
   - "maximum flow"
   - "reservoir leverage"
+  - "water scarcity pricing"
+  - "network interdiction"
+  - "shapley value"
   - "deterministic mission software"
 
 metadata:

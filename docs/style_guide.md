@@ -25,9 +25,29 @@ cannot exceed Dam.capacity"`), not bare asserts. Lookup functions raise
 
 ## Formatting
 
-Ruff (88-col default): `uv run ruff format src/ scripts/ tests/`. Mypy clean
-(`uv run mypy src/ scripts/`). Use `--strict`-style config already in
-`pyproject.toml` (`disallow_untyped_defs`, `warn_return_any`).
+Ruff at a 120-column line length, declared in this package's own
+`pyproject.toml` under `[tool.ruff]` so a standalone clone lints identically to
+the in-suite checkout:
+
+```bash
+uv run ruff check src/ scripts/ tests/
+uv run ruff format --check src/ scripts/ tests/
+uv run mypy src/ scripts/
+```
+
+Mypy runs with the strict-leaning options already in `pyproject.toml`
+(`disallow_untyped_defs`, `check_untyped_defs`, `warn_return_any`). `bond_api`
+ships without a `py.typed` marker, so it carries an `ignore_missing_imports`
+override — drop that override if the protocol package later publishes stubs.
+
+## Dead code and unreachable guards
+
+A defensive branch that cannot fire is not safety, it is noise that inflates
+the apparent test burden and hides a real invariant. If you can prove a guard
+unreachable, delete it and write the proof into a comment at the site — as
+`hydrology.max_flow` does for its augmenting-path bottleneck and
+`cartel_graph.hhi` does for its non-empty commodity set. Do not reach for
+`pragma: no cover` instead.
 
 ## Manuscript prose
 

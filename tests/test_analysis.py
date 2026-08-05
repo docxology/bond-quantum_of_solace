@@ -3,6 +3,8 @@
 import pytest
 
 from quantum_of_solace.analysis import (
+    INTERDICTION_STEPS,
+    SIMULATION_PERIODS,
     assess_cartel_graph,
     assess_hydrology,
     assess_pricing,
@@ -124,3 +126,64 @@ class TestRunQuantumAssessment:
 
     def test_deterministic(self):
         assert run_quantum_assessment() == run_quantum_assessment()
+
+
+class TestPartiallyConnectedNetwork:
+    """A source that cannot reach a settlement is skipped, not fatal."""
+
+    def _split_network(self) -> HydrologicalNetwork:
+        # Each aquifer feeds exactly one settlement, so half of the
+        # (source, settlement) pairs have no path at all.
+        return HydrologicalNetwork(
+            aquifers=[Aquifer(name="north_well", yield_rate=20.0), Aquifer(name="south_well", yield_rate=30.0)],
+            routes=[
+                Route("north_well", "north_town", capacity=10.0, distance_km=5.0, evaporation=0.1),
+                Route("south_well", "south_town", capacity=12.0, distance_km=5.0, evaporation=0.1),
+            ],
+        )
+
+    def test_unreachable_pairs_are_skipped_and_costs_still_reported(self):
+        metrics = assess_hydrology(self._split_network())
+        route_cost = metrics["shortest_route_cost"]
+        assert set(route_cost) == {"north_town", "south_town"}
+        # Each settlement still gets the cost of its own reachable source.
+        assert route_cost["north_town"] > 0.0
+        assert route_cost["south_town"] > 0.0
+        assert metrics["aquifer_count"] == 2
+        assert metrics["settlement_count"] == 2
+        assert metrics["settlements"] == ["north_town", "south_town"]
+
+    def test_delivery_counts_only_reachable_flow(self):
+        metrics = assess_hydrology(self._split_network())
+        delivery = metrics["settlement_delivery"]
+        assert delivery["north_town"] == 10.0
+        assert delivery["south_town"] == 12.0
+
+
+class TestAssessmentParameterMetadata:
+    """The parameters the manuscript cites are emitted by the assessment."""
+
+    def test_water_cartel_horizon_fields(self):
+        metrics = assess_water_cartel()
+        assert metrics["dam_count"] == 3
+        assert metrics["controlled_dam_count"] == 2
+        assert metrics["horizon_demand"] == pytest.approx((120.0 + 95.0 + 65.0) * SIMULATION_PERIODS)
+        assert metrics["aggregate_leverage"] == pytest.approx(metrics["withheld_volume"] / metrics["horizon_demand"])
+        assert 0.0 < metrics["aggregate_leverage"] < 1.0
+
+    def test_cartel_graph_band_fields(self):
+        metrics = assess_cartel_graph()
+        assert metrics["actor_count"] == 3
+        assert metrics["hhi_high_threshold"] == 2500.0
+        assert metrics["hhi_moderate_threshold"] == 1500.0
+        assert metrics["aggregate_band"] == "highly concentrated"
+        assert set(metrics["band_by_commodity"]) == set(metrics["commodities"])
+
+    def test_resilience_sequence_fields(self):
+        metrics = assess_resilience()
+        assert metrics["interdiction_steps"] == INTERDICTION_STEPS
+        assert metrics["sequence_cumulative_loss"] > 0.0
+        assert metrics["sequence_delivery_after"] == pytest.approx(
+            metrics["baseline_delivery"] - metrics["sequence_cumulative_loss"]
+        )
+        assert 0.0 < metrics["sequence_loss_frac"] < 1.0

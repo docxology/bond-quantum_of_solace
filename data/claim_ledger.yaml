@@ -1,33 +1,76 @@
 # Claim ledger: sourced numeric claims for evidence-registry validation.
 # All values are COMPUTED by the real domain algorithms on fixed instances;
 # evidence points at the exact module/function that produces them.
+#
+# This file is NOT trusted prose. tests/test_claim_ledger.py re-derives every
+# entry from the live assessment and fails if a value here has drifted, so a
+# stale claim is a test failure rather than a quiet lie. `token` names the
+# manuscript variable that carries the same number into the paper.
 
 claims:
   - id: "quantum.hydrology.total_supply"
     claim: "Total aquifer yield is 80.0 units per period"
     value: 80.0
+    token: "HYDRO_TOTAL_SUPPLY"
     evidence: "quantum_of_solace.hydrology.default_network; analysis.assess_hydrology"
     determinism: true
 
   - id: "quantum.hydrology.border_delivery"
     claim: "border_town receives 65.0 max delivered units per period"
     value: 65.0
+    token: "RESULT_BORDER_DELIVERY"
     evidence: "quantum_of_solace.hydrology.max_flow (Edmonds-Karp); analysis.assess_hydrology"
     determinism: true
 
   - id: "quantum.water_cartel.aggregate_leverage"
-    claim: "Aggregate cartel leverage under a 0.5 restriction over 12 periods"
-    value: 3.0
+    claim: >-
+      Controlling 2 of 3 dams at a 0.5 restriction withholds 0.256 of the
+      fleet's downstream demand over the 12-period horizon. Numerator and
+      denominator are both horizon volumes, so the value is a share in [0, 1].
+    value: 0.256
+    tolerance: 0.0005
+    token: "RESULT_AGG_LEVERAGE"
     evidence: "quantum_of_solace.water_cartel.cartel_leverage; analysis.assess_water_cartel"
     determinism: true
 
   - id: "quantum.cartel_graph.aggregate_hhi"
-    claim: "Portfolio-mean Herfindahl-Hirschman index is 3925 points"
+    claim: "Portfolio-mean Herfindahl-Hirschman index is 3925 points (highly concentrated)"
     value: 3925.0
+    token: "RESULT_AGG_HHI"
     evidence: "quantum_of_solace.cartel_graph.hhi; analysis.assess_cartel_graph"
     determinism: true
 
+  - id: "quantum.pricing.restricted_price"
+    claim: "Cutting supply raises the clearing water price to 64.4"
+    value: 64.4
+    tolerance: 0.05
+    token: "PRICE_RESTRICTED"
+    evidence: "quantum_of_solace.pricing.scarcity_impact; analysis.assess_pricing"
+    determinism: true
+
+  - id: "quantum.resilience.index"
+    claim: "Mean delivery retained after any single aqueduct cut is 0.833"
+    value: 0.833
+    tolerance: 0.0005
+    token: "RESIL_INDEX"
+    evidence: "quantum_of_solace.resilience.resilience_index; analysis.assess_resilience"
+    determinism: true
+
+  - id: "quantum.shapley.leading_actor_value"
+    claim: "The leading actor's exact Shapley value over the commodity portfolio is 2.624"
+    value: 2.624
+    tolerance: 0.0005
+    token: "SHAPLEY_QUANTUM"
+    evidence: "quantum_of_solace.shapley.shapley_value; analysis.assess_shapley"
+    determinism: true
+
 algorithm_attributions:
-  - {algorithm: "Dijkstra shortest path", reference: "Dijkstra 1959", module: "hydrology.shortest_route"}
-  - {algorithm: "Edmonds-Karp maximum flow", reference: "Edmonds & Karp 1972", module: "hydrology.max_flow"}
-  - {algorithm: "Herfindahl-Hirschman index", reference: "Hirschman 1945", module: "cartel_graph.hhi"}
+  - {algorithm: "Dijkstra shortest path", reference: "dijkstra1959note", module: "hydrology.shortest_route"}
+  - {algorithm: "Edmonds-Karp maximum flow", reference: "edmonds1972theoretical", module: "hydrology.max_flow"}
+  - {algorithm: "Max-flow/min-cut theorem", reference: "ford1956maximal", module: "resilience.minimum_cut"}
+  - {algorithm: "Deterministic network interdiction", reference: "wood1993deterministic", module: "resilience.interdiction_sequence"}
+  - {algorithm: "Herfindahl-Hirschman index", reference: "hirschman1945national", module: "cartel_graph.hhi"}
+  - {algorithm: "HHI concentration bands", reference: "doj2010merger", module: "cartel_graph.concentration_band"}
+  - {algorithm: "Reservoir mass-balance simulation", reference: "loucks2017water", module: "water_cartel.run_reservoir"}
+  - {algorithm: "Shapley value", reference: "shapley1953value", module: "shapley.shapley_value"}
+  - {algorithm: "Banzhaf-Coleman power index", reference: "banzhaf1965weighted", module: "shapley.banzhaf_power"}

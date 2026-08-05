@@ -1,8 +1,11 @@
 """Subprocess smoke tests for the thin QUANTUM CLI scripts."""
 
+import re
 import subprocess
 import sys
 from pathlib import Path
+
+from quantum_of_solace.manuscript_variables import generate_variables
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -17,7 +20,7 @@ def _run(script: str, *args: str) -> subprocess.CompletedProcess:
 
 
 class TestGenerateAnalysis:
-    def test_run_writes_artifacts(self, tmp_path: Path):
+    def test_run_writes_artifacts(self):
         result = _run("generate_analysis.py")
         assert result.returncode == 0, result.stderr
         assert (PROJECT_ROOT / "output" / "data" / "quantum_assessment.json").exists()
@@ -44,7 +47,9 @@ class TestRunMission:
     def test_full(self):
         result = _run("run_mission.py", "full")
         assert result.returncode == 0
-        assert "Successful" in result.stdout or "Success:" in result.stdout
+        assert "Success: True" in result.stdout
+        assert "Film quantum_of_solace / QUANTUM" in result.stdout
+        assert result.stdout.count("lesson:") == 6
 
     def test_unknown_phase(self):
         result = _run("run_mission.py", "bogus")
@@ -65,19 +70,43 @@ class TestManuscriptVariablesScript:
 
 
 class TestManuscriptCrossReference:
-    def test_every_prose_token_is_generated(self):
-        """Every ``{{TOKEN}}`` in numbered manuscript sections must be producible."""
-        import re
+    """Bind manuscript prose to the live token generator, not to a stale artifact."""
 
-        variables = PROJECT_ROOT / "output" / "data" / "manuscript_variables.json"
-        token_values = set()
-        if variables.exists():
-            import json
+    @staticmethod
+    def _sections() -> list[Path]:
+        return sorted((PROJECT_ROOT / "manuscript").glob("[0-9]*.md"))
 
-            token_values = set(json.loads(variables.read_text()))
+    @staticmethod
+    def _tokens_in(sections: list[Path]) -> set[str]:
         pattern = re.compile(r"\{\{([A-Z0-9_]+)\}\}")
         found: set[str] = set()
-        for section in sorted((PROJECT_ROOT / "manuscript").glob("[0-9]*.md")):
+        for section in sections:
             found.update(pattern.findall(section.read_text(encoding="utf-8")))
-        missing = found - token_values
+        return found
+
+    def test_scan_set_is_not_empty(self):
+        """A vacuous scan (no sections, or no tokens) must fail, not pass."""
+        sections = self._sections()
+        assert len(sections) >= 8, f"expected the full numbered section set, found {len(sections)}"
+        assert len(self._tokens_in(sections)) >= 20
+
+    def test_every_prose_token_is_generated(self):
+        """Every ``{{TOKEN}}`` in numbered sections must be produced live."""
+        produced = set(generate_variables())
+        assert produced, "generate_variables() produced no tokens"
+        missing = self._tokens_in(self._sections()) - produced
         assert not missing, f"manuscript tokens not generated: {sorted(missing)}"
+
+    def test_results_prose_carries_no_bare_decimal_metrics(self):
+        """Results prose states measurements through tokens, never as literals.
+
+        Integers survive (section numbering, list ordinals); a bare decimal in
+        the results narrative is a hand-authored metric that escaped the token
+        pipeline.
+        """
+        results = (PROJECT_ROOT / "manuscript" / "03_results.md").read_text(encoding="utf-8")
+        detokenised = re.sub(r"\{\{[A-Z0-9_]+\}\}", "TOKEN", results)
+        # Strip figure paths, which legitimately carry no numerals but may in future.
+        detokenised = re.sub(r"!\[[^\]]*\]\([^)]*\)\{[^}]*\}", "", detokenised)
+        stray = re.findall(r"(?<![\w.])\d+\.\d+(?![\w])", detokenised)
+        assert not stray, f"hand-authored decimal metrics in results prose: {stray}"

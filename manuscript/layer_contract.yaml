@@ -1,4 +1,5 @@
 # Layer contract for the QUANTUM film package.
+# Prose form: docs/architecture.md. Keep the two in step.
 
 layers:
   domain_core:
@@ -6,22 +7,46 @@ layers:
       - "quantum_of_solace/hydrology.py"
       - "quantum_of_solace/water_cartel.py"
       - "quantum_of_solace/cartel_graph.py"
+      - "quantum_of_solace/pricing.py"
+      - "quantum_of_solace/resilience.py"
+      - "quantum_of_solace/shapley.py"
     rules:
       - "no bond_api imports"
       - "no infrastructure imports"
-      - "stdlib only"
+      - "stdlib only, except that resilience.py and shapley.py may import one sibling domain module"
       - "deterministic (no random draws, no wall clock)"
+  assessment:
+    modules:
+      - "quantum_of_solace/analysis.py"
+    rules:
+      - "imports domain_core only; never bond_api"
+      - "owns the fixed parameter constants (CONTROLLED_DAMS, RESTRICTION_FRAC, SIMULATION_PERIODS, INTERDICTION_STEPS)"
+      - "single source of truth for every reported number"
   adapter:
     modules:
       - "quantum_of_solace/mission.py"
-      - "quantum_of_solace/analysis.py"
       - "quantum_of_solace/manuscript_variables.py"
       - "quantum_of_solace/figures.py"
     rules:
-      - "may import bond_api (mission.py) and domain_core"
-      - "analysis.py imports only domain_core"
+      - "mission.py is the only bond_api importer"
+      - "no mathematics of their own; all numbers come from analysis.py"
+      - "mission.py's MissionProvider and GADGET_REGISTRY are a frozen public surface"
   scripts:
     modules:
       - "scripts/*.py"
     rules:
       - "thin orchestrators only; no business logic"
+      - "sys.path bootstrap, argument dispatch and printing only"
+
+frozen_surface:
+  module: "quantum_of_solace/mission.py"
+  reason: "bond-cli, the coordinator reconcile and the orchestrator consume these names across packages"
+  names:
+    - "MissionProvider"
+    - "MissionProvider.brief"
+    - "MissionProvider.recon"
+    - "MissionProvider.plan"
+    - "MissionProvider.execute"
+    - "MissionProvider.debrief"
+    - "GADGET_REGISTRY"
+  policy: "additive changes only; never rename, remove or change a signature"

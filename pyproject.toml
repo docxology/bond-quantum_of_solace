@@ -36,6 +36,28 @@ dev = [
 [tool.uv.sources]
 bond-api = { path = "/Users/4d/Documents/GitHub/template/projects/working/bond/bond-api" }
 
+# Lint settings are declared locally so a standalone clone of this package lints
+# identically to the in-suite checkout. Without this block ruff walks up and
+# resolves the enclosing template repository's configuration, which a fork would
+# not have. The rule set mirrors that configuration deliberately.
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = [
+    "E741",  # short math variable names are idiomatic in the domain models
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Thin orchestrators bootstrap sys.path before importing the package.
+"scripts/*.py" = ["E402", "E501"]
+# Long prose lines inside domain-model docstrings.
+"src/**" = ["E501"]
+"tests/**/*.py" = ["E712", "E402", "E501"]
+"__init__.py" = ["F401"]
+
 [tool.pytest.ini_options]
 pythonpath = [".", "src"]
 testpaths = ["tests"]

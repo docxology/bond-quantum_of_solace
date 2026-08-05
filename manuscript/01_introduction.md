@@ -11,18 +11,44 @@ discover and drive it by slug.
 
 ## The threat model
 
-The film's cartel holds leverage because water is scarce and its distribution
-is centralisable. We formalise that as three coupled models:
+The film's cartel holds leverage because water is scarce, its distribution is
+centralisable, and the same organisation spreads its grip across neighbouring
+commodities. We formalise that as six coupled models, each a separate module in
+the pure domain core.
 
-* **Hydrology behaviour** (`hydrology.py`): a directed network of desert water
+**The physical layer — where the water is and how it moves.**
+
+* **Desert hydrology** (`hydrology.py`): a directed network of desert water
   sources, routes and settlements. Evaporation hollows out delivered water, so
-  routing and capacity are real constraints.
+  routing and capacity are real constraints, and what a settlement can receive
+  is bounded by a maximum flow rather than by nominal aquifer yield.
 * **Water-rights cartel** (`water_cartel.py`): a set of reservoirs whose
   released water serves downstream demand. A cartel that controls a dam can
   withhold its normal release and squeeze demand without firing a shot.
+
+**The economic layer — what that control is worth.**
+
 * **Commodity-cartel graph** (`cartel_graph.py`): concentration of control
   across multiple scarce commodities, measured with the Herfindahl–Hirschman
-  index and dominance analysis.
+  index, top-k concentration ratios and dominance analysis.
+* **Scarcity pricing** (`pricing.py`): the market that converts a withheld
+  volume into money — a linear demand curve, the clearing price of a restricted
+  supply, the point elasticity that makes water so profitable to withhold, and
+  the monopoly solution with its deadweight loss.
+
+**The coercive layer — what the cartel can do beyond owning the taps.**
+
+* **Aqueduct interdiction** (`resilience.py`): the fragility of the delivery
+  network to cut routes — per-route criticality, a greedy worst-case attack
+  sequence, a single-cut resilience index, and minimum cuts.
+* **Cooperative power** (`shapley.py`): who can actually capture the value of
+  the commodity portfolio, resolved exactly as a transferable-utility coalition
+  game via the Shapley value and the Banzhaf–Coleman index.
+
+The layers compose rather than sit side by side: the hydrology network sets the
+delivered volumes the interdiction model attacks, and the reservoir simulation
+supplies the baseline and restricted supplies the pricing model clears.
 
 Every number in the manuscript is computed by `src/quantum_of_solace/analysis.py`
-from these modules on fixed problem instances — none is hand-authored prose.
+from these modules on fixed problem instances and injected as a manuscript
+token — none is hand-authored prose.

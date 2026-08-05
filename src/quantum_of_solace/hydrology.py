@@ -354,14 +354,17 @@ class HydrologicalNetwork:
             if not reached:
                 break
 
+            # Every edge on the augmenting path was admitted by the BFS with
+            # ``capacity > MAX_FLOW_DELTA``, so the bottleneck (their minimum)
+            # is strictly positive — no zero-augmentation guard is needed, and
+            # adding one would risk breaking out with ``seen`` still containing
+            # the target, corrupting the residual reachability used for cuts.
             bottleneck = float("inf")
             node = target
             while node != source:
                 previous, edge = parent[node]
                 bottleneck = min(bottleneck, edge.capacity)
                 node = previous
-            if bottleneck <= MAX_FLOW_DELTA:
-                break
 
             node = target
             while node != source:

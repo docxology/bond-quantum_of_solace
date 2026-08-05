@@ -234,3 +234,35 @@ class TestMaxFlow:
         # A->T (5) plus C->T (10) = 15; C collects 5 (via A) + 8 (via B) capped at 10.
         assert solution.total_flow == pytest.approx(15.0)
         assert solution.augmentations >= 2
+
+
+class TestDijkstraFrontierPruning:
+    """Dijkstra must discard a stale frontier entry for an already-settled node."""
+
+    def test_worse_duplicate_entry_is_pruned_and_unreachable_target_raises(self):
+        # ``depot`` is reachable both directly (cost 1.0) and via ``relay``
+        # (cost 2.0), so the worse entry is popped after ``depot`` is settled.
+        network = HydrologicalNetwork(
+            aquifers=[Aquifer(name="spring", yield_rate=10.0)],
+            routes=[
+                Route("spring", "depot", capacity=5.0, distance_km=1.0, evaporation=0.0, cost_per_unit=1.0),
+                Route("spring", "relay", capacity=5.0, distance_km=1.0, evaporation=0.0, cost_per_unit=1.0),
+                Route("relay", "depot", capacity=5.0, distance_km=1.0, evaporation=0.0, cost_per_unit=1.0),
+            ],
+        )
+        # The cheap direct path wins.
+        assert network.shortest_route("spring", "depot").total_cost == pytest.approx(1.0)
+        # Searching for a node outside the graph drains the whole frontier,
+        # exercising the stale-entry prune, and then fails loudly.
+        with pytest.raises(ValueError, match="no route from"):
+            network.shortest_route("spring", "oasis")
+
+    def test_max_flow_augments_only_with_positive_bottlenecks(self):
+        """Every augmentation moves a strictly positive volume."""
+        network = default_network()
+        solution = network.max_flow("highland_aquifer", "border_town")
+        assert solution.augmentations >= 1
+        assert solution.total_flow > 0.0
+        assert all(volume > 0.0 for _, _, volume in solution.edge_flows)
+        # Residual reachability must exclude the sink once the flow is maximal.
+        assert "border_town" not in solution.reachable

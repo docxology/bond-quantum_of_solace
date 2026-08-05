@@ -25,7 +25,38 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-__all__ = ["CommodityCartelGraph", "ConcentrationReport", "default_cartel"]
+__all__ = [
+    "HHI_HIGHLY_CONCENTRATED",
+    "HHI_MODERATELY_CONCENTRATED",
+    "CommodityCartelGraph",
+    "ConcentrationReport",
+    "concentration_band",
+    "default_cartel",
+]
+
+#: Lower HHI bound (points) of the "moderately concentrated" band used by the
+#: U.S. DOJ/FTC Horizontal Merger Guidelines (2010, §5.3).
+HHI_MODERATELY_CONCENTRATED = 1500.0
+#: HHI (points) above which the same guidelines call a market "highly
+#: concentrated" — the threshold the QUANTUM commodity portfolio clears.
+HHI_HIGHLY_CONCENTRATED = 2500.0
+
+
+def concentration_band(hhi_points: float) -> str:
+    """Classify an HHI value into the Merger-Guidelines concentration band.
+
+    Returns ``"unconcentrated"`` below
+    :data:`HHI_MODERATELY_CONCENTRATED`, ``"moderately concentrated"`` up to
+    and including :data:`HHI_HIGHLY_CONCENTRATED`, and ``"highly
+    concentrated"`` above it.
+    """
+    if not isinstance(hhi_points, (int, float)) or isinstance(hhi_points, bool) or hhi_points < 0:
+        raise ValueError("hhi_points must be a non-negative number")
+    if hhi_points < HHI_MODERATELY_CONCENTRATED:
+        return "unconcentrated"
+    if hhi_points <= HHI_HIGHLY_CONCENTRATED:
+        return "moderately concentrated"
+    return "highly concentrated"
 
 
 def _require_share(value: object, label: str) -> float:
@@ -123,8 +154,8 @@ class CommodityCartelGraph:
         if commodity is not None:
             shares = [self.share_of(actor, commodity) for actor in self._shares if self.controls(actor, commodity)]
             return _hhi_points(shares)
-        if not self._commodities:
-            return 0.0
+        # ``_commodities`` is never empty: the constructor rejects any actor
+        # with an empty portfolio, so at least one commodity always exists.
         return sum(self.hhi(commodity) for commodity in self._commodities) / len(self._commodities)
 
     def concentration_ratio(self, commodity: str, top: int = 3) -> float:
