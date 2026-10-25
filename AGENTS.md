@@ -6,9 +6,9 @@ any file, and [`docs/architecture.md`](docs/architecture.md) before adding one.
 
 ## Scope and isolation
 
-Work ONLY inside this directory. It is its own git repository with **no
-remote** — never push. Commits are path-scoped (`git add -A` inside this repo
-only). Do not touch a sibling package, the bond root, or the template repo.
+Work ONLY inside this directory. It is its own git repository, tracking
+`origin/main` at `github.com/docxology/bond-quantum_of_solace`. Commits are
+path-scoped (`git add -A` inside this repo only). Do not touch a sibling package, the bond root, or the template repo.
 
 ## Build
 

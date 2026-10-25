@@ -1,8 +1,8 @@
 # Experimental Setup
 
-This package is a BOND-suite film repository with a `src/` layout, a local-only
-git working tree, and a line-and-branch coverage floor enforced on `src/` by
-the package's own pytest gate.
+This package is a BOND-suite film repository with a `src/` layout, its own git
+repository, and a line-and-branch coverage floor enforced on `src/` by the
+package's own pytest gate.
 
 ## Software environment
 

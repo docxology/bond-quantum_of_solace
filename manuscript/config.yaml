@@ -1,5 +1,5 @@
 # QUANTUM — Quantum of Solace (2008) special-agent mission software.
-# BOND suite local-only working tree. Manuscript metadata + experiment params.
+# BOND suite film package. Manuscript metadata + experiment params.
 # Loaded by src/quantum_of_solace/manuscript_variables.py (generate_variables).
 
 paper:
@@ -15,7 +15,7 @@ authors:
     affiliation: "Active Inference Institute"
     corresponding: true
 
-# Local-only tree: publication DOI/metadata are intentionally omitted (no remote).
+# Publication DOI metadata is intentionally omitted until a DOI is minted.
 publication:
   journal: "BOND Mission Software Series"
   year: "2026"

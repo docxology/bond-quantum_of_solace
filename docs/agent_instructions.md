@@ -6,9 +6,10 @@ operational contract; `architecture.md` explains what the code does and
 
 ## Rule 1 — Scope
 
-Work ONLY inside this package directory. It is a local-only BOND-suite git repo
-with **no remote** — never push, and never modify a sibling package, the bond
-root, or the template repo. Commit with path-scoped commits in this repo only.
+Work ONLY inside this package directory. It is its own BOND-suite git repo
+tracking `origin/main` at `github.com/docxology/bond-quantum_of_solace`; never
+modify a sibling package, the bond root, or the template repo. Commit with
+path-scoped commits in this repo only.
 
 ## Rule 2 — The coverage gate
 

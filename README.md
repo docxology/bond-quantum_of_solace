@@ -80,6 +80,10 @@ uv run python scripts/z_generate_manuscript_variables.py  # the manuscript token
 uv run python scripts/run_mission.py full                 # the five-stage mission flow
 ```
 
+Note: `bond-api` is a path dependency on the BOND suite checkout
+(`[tool.uv.sources]` in `pyproject.toml`); a standalone clone must provide that
+path for `uv sync` to resolve.
+
 `run_mission.py` also accepts a single phase — `brief`, `recon`, `plan`,
 `execute` or `debrief` — and an optional goal string:
 
@@ -103,8 +107,8 @@ that goes stale.
 
 ## Project BOND
 
-Local-only working tree; never push. One of 27 film packages plus the shared
-infrastructure (`bond-api`, `bond-utilities`, `bond-coordinator`,
+Standalone GitHub repository (`docxology/bond-quantum_of_solace`); one of 27
+film packages plus the shared infrastructure (`bond-api`, `bond-utilities`, `bond-coordinator`,
 `bond-orchestrator`, `bond-cli`, `bond-ops`). This package binds to _only_
 `bond-api` (the frozen protocol); the domain core stays importable without it.
 See [`docs/agent_instructions.md`](docs/agent_instructions.md) for the

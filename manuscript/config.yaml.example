@@ -1,5 +1,5 @@
 # Reference copy of manuscript/config.yaml for new projects.
-# Local-only working tree: publication DOI/metadata intentionally omitted.
+# Publication DOI metadata is intentionally omitted until a DOI is minted.
 
 paper:
   title: "Project Title"

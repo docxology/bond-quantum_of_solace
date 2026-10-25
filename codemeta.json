@@ -12,6 +12,6 @@
     "maximum flow",
     "deterministic mission software"
   ],
-  "codeRepository": "local-only",
+  "codeRepository": "https://github.com/docxology/bond-quantum_of_solace",
   "programmingLanguage": "Python"
 }
