@@ -34,7 +34,7 @@ dev = [
 # package binds to). The pure domain modules import nothing from it; only
 # mission.py imports bond_api.
 [tool.uv.sources]
-bond-api = { path = "/Users/4d/Documents/GitHub/template/projects/working/bond/bond-api" }
+bond-api = { path = "../bond-api" }
 
 # Lint settings are declared locally so a standalone clone of this package lints
 # identically to the in-suite checkout. Without this block ruff walks up and
