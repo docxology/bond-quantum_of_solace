@@ -37,21 +37,16 @@ test passes a fleet missing one controlled dam and asserts
 that fails against today's code.
 *Command:* `uv run pytest tests/test_analysis.py -k controlled -v`
 
-**C2 — the `bond-api` path dependency is a machine-specific absolute path.**
-`pyproject.toml:37` pins
-`bond-api = { path = "/Users/4d/Documents/GitHub/template/projects/working/bond/bond-api" }`.
-Two lines later (`pyproject.toml:39-42`) the file states its own rationale for
-declaring lint settings locally: "so a standalone clone of this package lints
-identically … which a fork would not have." That intent is defeated by a path
-that resolves on exactly one machine. A relative `../bond-api` resolves
-identically in-suite and survives relocation. Honest scope: this is a suite-wide
-convention — `../skyfall/pyproject.toml:35-36` does the same — so changing it
-here alone makes this package diverge from its siblings. Raise it as a suite
-decision, not a unilateral edit.
-*Done when:* either the path is relative and a relocated copy syncs cleanly, or
-the absolute form is recorded in `AGENTS.md` as a deliberate suite convention and
-this item moves to Known limitations.
-*Command:* `cp -R . /tmp/quantum-relocation-probe && cd /tmp/quantum-relocation-probe && rm -rf .venv && uv sync --all-extras`
+**C2 — closed 2026-11-03: the `bond-api` path dependency is the sibling-relative form.**
+`pyproject.toml` pins `bond-api = { path = "../bond-api" }`, the form that resolves identically
+in-suite and survives relocation, and `uv.lock` was regenerated from that declaration — the
+"standalone clone lints and runs identically" intent in `pyproject.toml:39-42` is no longer
+defeated by a path that resolves on exactly one machine.
+The suite-wide question is settled in the other direction: the fleet is being repointed to the
+relative form, so this package matches its siblings instead of diverging from them.
+*Closure measured 2026-11-03:* a relocated copy with `../bond-api` beside it syncs (`rc=0`) and the
+suite is **248 passed**.
+*Command:* `cd "$(git rev-parse --show-toplevel)" && uv sync --extra dev && uv run pytest -q`
 
 ### Verification
 
