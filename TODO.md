@@ -48,6 +48,11 @@ relative form, so this package matches its siblings instead of diverging from th
 suite is **248 passed**.
 *Command:* `cd "$(git rev-parse --show-toplevel)" && uv sync --extra dev && uv run pytest -q`
 
+**Superseded 2026-11-04 by the vendoring wave** (the measurement above stands as the 2026-11-03
+record): the fleet settled on the opposite form and this package now resolves `bond-api` from the
+recorded copy at `vendor/bond-api`, so a clone resolves with no sibling anywhere. `uv lock --check`
+went rc=1 → rc=0 on that declaration; see the wave section at the end of this file.
+
 ### Verification
 
 **V1 — `experiment_plan.yaml` declares an ablation programme that nothing runs
@@ -251,15 +256,19 @@ output, not just the exit codes.
 uv run pytest tests/ --cov=src --cov-fail-under=90
 
 # Style and types. Expect: "All checks passed!", "N files already formatted",
-# "Success: no issues found in 16 source files".
+# "Success: no issues found in 17 source files" (16 until the vendoring pass
+# added scripts/vendor.py).
 uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/ tests/
 uv run mypy src/ scripts/
 
 # No mocks anywhere. Expect: "no mocks".
 grep -rn "unittest.mock\|MagicMock\|mocker.patch\|@patch\|create_autospec" tests/ || echo "no mocks"
 
-# No exemplar lineage. Expect: "no exemplar leftovers".
-grep -rn "template_code_project" . --exclude-dir=.venv --exclude-dir=.git || echo "no exemplar leftovers"
+# No exemplar lineage. Expect: "no exemplar leftovers". The pattern is written
+# as a bracket class so this command and the other copies of it are not
+# themselves its only hits (measured before the fix: rc=0 with four hits, every
+# one of them a copy of this command or the rule it enforces — no real leftover).
+grep -rn "template_[c]ode_project" . --exclude-dir=.venv --exclude-dir=.git || echo "no exemplar leftovers"
 
 # Artifacts regenerate deterministically. Expect: exit 0, six PNGs, token JSON.
 uv run python scripts/generate_analysis.py
@@ -275,3 +284,34 @@ git status --short
 `uv` cannot write its cache under a restrictive sandbox. `Failed to initialize
 cache at ~/.cache/uv` is an environment restriction, not a package failure —
 re-run with the sandbox disabled.
+
+## Vendoring wave (2026-11-04)
+
+The fleet's second vendoring pass removes the sibling checkout that C2 had just
+settled on: `bond-api` now ships as the recorded copy at `vendor/bond-api`
+(`VENDOR.md`, `PROVENANCE.json`, upstream `c0362ff0c9d7` — payload `aggregate_sha256`
+`2e8fa087be…`), `[tool.uv.sources]` points there, and `uv.lock` was regenerated
+from that declaration (`uv lock --check` rc=1 → rc=0; the regenerated lock is
+byte-identical across two runs). The git-clean blob set was verified 16/16
+against the patch's `copied_paths`, and `scripts/vendor.py --check` reports
+`ok` with 0 findings.
+
+This repository's `[tool.ruff]` already declared `line-length = 120`, and the
+generated patch therefore arrived with the checker bytes that conform to that
+width (`checker_sha256 0372e5d8…`): no re-conform and no re-seal were needed —
+the wave's first such row. Effective width measured 120, against 88 under
+`--isolated`.
+
+| # | Observation | Evidence |
+|---|---|---|
+| W1 | The generated `extend-exclude = ["vendor"]` is load-bearing for `ruff format`, not for this rule set's lint. | Two-arm control, table kept in `pyproject.toml` and only its body varied. As committed: whole-tree `ruff check` rc=0 "All checks passed!" with 0 findings under `vendor/`; whole-tree `ruff format --check` rc=1 with one target (`README.md`). Exclusion line removed: `ruff check` still rc=0 (the vendored sources produce no `select = ["E","F"]` findings); `ruff format --check` rc=1 with two targets (adds `vendor/bond-api/README.md`). |
+| W2 | The lineage audit's documented expectation was unreachable in this repository and is corrected in place. | At the pre-change head the command exited 0 with four hits — three copies of the command itself and one rule line stating what it forbids; no real leftover. The pattern is now a bracket class in all four sites, and the audit re-measured rc=1 with 0 hits, printing `no exemplar leftovers` (the documented expectation). |
+| W3 | The live expectations in the verification block are re-dated and re-measured; the dated figures earlier in this file keep their dates and gains a supersession pointer. | mypy 16 → **17** source files (the vendoring pass adds `scripts/vendor.py`); scoped format 39 → **41** files; suite 248 → **249** passed at 100.00% (954/212, 0 partial). The "Measured on 2026-08-05" intro figures and C2's "Closure measured 2026-11-03" figures are left as dated measurements. |
+| W4 | Recorded, not swept: the whole-tree formatter red on `README.md`. | `ruff format --check .` rc=1 on one file, `README.md` (a fenced block), at both ends, outside the documented scoped gate; present before the change and identical after it. |
+
+End-to-end evidence at the branch tip: gate 1 rc=0, 249 passed, 100.00%; mocks
+rc=1 with 0 hits; lineage rc=1 with 0 hits; `ruff check` rc=0 and `ruff format
+--check` 41 files; whole-tree check rc=0 with 0 findings under `vendor/`; mypy
+17 files in both spellings; the analysis + manuscript-variable regeneration
+byte-identical across two runs (digest `ae008845051d9ea8`), 8 output files;
+`run_mission.py full` rc=0.
