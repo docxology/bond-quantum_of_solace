@@ -13,3 +13,6 @@ __pycache__/
 
 # Regenerable analysis artifacts (scripts regenerate these deterministically).
 output/
+
+# Build output the vendored copies' own builds write into vendor/.
+vendor/**/build/
