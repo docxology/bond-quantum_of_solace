@@ -90,7 +90,7 @@ uv run pytest tests/ --cov=src --cov-fail-under=90
 grep -rn "unittest.mock\|MagicMock\|mocker.patch\|@patch\|create_autospec" tests/ || echo "no mocks"
 uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/ tests/
 uv run mypy src/ scripts/
-grep -rn "template_code_project" . --exclude-dir=.venv --exclude-dir=.git || echo "no exemplar leftovers"
+grep -rn "template_[c]ode_project" . --exclude-dir=.venv --exclude-dir=.git || echo "no exemplar leftovers"
 uv run python scripts/generate_analysis.py
 uv run python scripts/z_generate_manuscript_variables.py
 git status --short   # clean after a path-scoped commit

@@ -34,13 +34,15 @@ dev = [
 # package binds to). The pure domain modules import nothing from it; only
 # mission.py imports bond_api.
 [tool.uv.sources]
-bond-api = { path = "../bond-api" }
+bond-api = { path = "vendor/bond-api" }
 
 # Lint settings are declared locally so a standalone clone of this package lints
 # identically to the in-suite checkout. Without this block ruff walks up and
 # resolves the enclosing template repository's configuration, which a fork would
 # not have. The rule set mirrors that configuration deliberately.
 [tool.ruff]
+# The vendored copies are byte-identical to upstream and must stay that way.
+extend-exclude = ["vendor"]
 line-length = 120
 target-version = "py310"
 
@@ -87,6 +89,8 @@ exclude_lines = [
 [tool.mypy]
 # The package lives under a src/ layout; point mypy at it so its own modules
 # resolve, alongside bond_api (installed into the project venv).
+# Vendored copies are a dependency; their bytes are bound by scripts/vendor.py.
+exclude = ["(^|/)vendor/"]
 mypy_path = ["src"]
 explicit_package_bases = true
 python_version = "3.12"

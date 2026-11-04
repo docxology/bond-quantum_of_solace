@@ -17,7 +17,8 @@ uv sync --extra dev
 ```
 
 Runtime deps: `numpy`, `matplotlib`, `pyyaml`, and `bond-api` as a path
-dependency (`[tool.uv.sources]` in `pyproject.toml`). Dev extras add `pytest`,
+dependency on the recorded copy at `vendor/bond-api` (`[tool.uv.sources]` in
+`pyproject.toml`; see `VENDOR.md`). Dev extras add `pytest`,
 `pytest-cov`, `mypy`, `ruff` and `types-PyYAML`.
 
 ## Run
@@ -52,7 +53,7 @@ Run all of it before calling work done, and read the real output:
 ```bash
 uv run pytest tests/ --cov=src --cov-fail-under=90
 grep -rn "unittest.mock\|MagicMock\|mocker.patch\|@patch\|create_autospec" tests/ || echo "no mocks"
-grep -rn "template_code_project" . --exclude-dir=.venv --exclude-dir=.git || echo "no exemplar leftovers"
+grep -rn "template_[c]ode_project" . --exclude-dir=.venv --exclude-dir=.git || echo "no exemplar leftovers"
 uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/ tests/
 uv run mypy src/ scripts/
 uv run python scripts/generate_analysis.py && uv run python scripts/z_generate_manuscript_variables.py
@@ -86,7 +87,9 @@ Machine-readable form: [`manuscript/layer_contract.yaml`](manuscript/layer_contr
   persisted artifact. `MISSION_SEED` is recorded for provenance; nothing draws
   from it.
 - **Ruff + mypy clean** on `src/`, `scripts/` and `tests/`.
-- **No `template_code_project` lineage strings.**
+- **No exemplar-lineage strings** (the name of the scaffold this package was
+  forked from). The Verify command above checks it; its pattern is written as a
+  bracket class so the check is not satisfied by its own text.
 - **Never hand-author a metric** — not in the manuscript, not in these docs.
   Metrics are injected from `manuscript/config.yaml` plus
   `src/quantum_of_solace/manuscript_variables.py`, and two live tests fail if
