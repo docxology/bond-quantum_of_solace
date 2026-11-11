@@ -315,3 +315,7 @@ rc=1 with 0 hits; lineage rc=1 with 0 hits; `ruff check` rc=0 and `ruff format
 17 files in both spellings; the analysis + manuscript-variable regeneration
 byte-identical across two runs (digest `ae008845051d9ea8`), 8 output files;
 `run_mission.py full` rc=0.
+
+## Workflowz review — 2026-11-10
+
+No new actionable finding survived this bounded review. Coverage: root working agreement, README, existing TODO, Python and package configuration, the mission CLI, package exports, Shapley/coalition logic, resilience/interdiction logic, and manuscript-token hydration. Existing TODO items were not duplicated. Re-review on a concrete failure or a relevant source/configuration change.
