@@ -44,7 +44,7 @@ bond-api = { path = "vendor/bond-api" }
 # The vendored copies are byte-identical to upstream and must stay that way.
 extend-exclude = ["vendor"]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F"]
