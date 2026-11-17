@@ -5,6 +5,30 @@ one package of the **PROJECT BOND** suite (codename **QUANTUM**). It is bound
 to the suite's frozen `bond_api` mission protocol, so the fleet orchestrator
 can discover and drive it by slug.
 
+## Mission model
+
+```mermaid
+flowchart TD
+    accTitle: QUANTUM implemented mission analyses
+    accDescr: Aquifers, aqueducts, reservoir controls and commodity holdings feed Water-network delivery and reservoir leverage; Scarcity pricing and interdiction resilience; Commodity concentration and cooperative power. The mission adapter returns supply, pricing, cut-vulnerability and power-index metrics with provenance, then a debrief.
+    I["Aquifers, aqueducts, reservoir controls and commodity holdings"]
+    G0["Water-network delivery and reservoir leverage"]
+    I --> G0
+    G1["Scarcity pricing and interdiction resilience"]
+    I --> G1
+    G2["Commodity concentration and cooperative power"]
+    I --> G2
+    O["mission.py: execute returns MissionOutcome<br/>Supply, pricing, cut-vulnerability and power-index metrics and provenance"]
+    G0 --> O
+    G1 --> O
+    G2 --> O
+    O --> F["debrief: mission summary"]
+```
+
+The branches group implemented capabilities; they do not imply a runtime order.
+
+**Source map:** [`hydrology.py`](src/quantum_of_solace/hydrology.py), [`water_cartel.py`](src/quantum_of_solace/water_cartel.py); [`pricing.py`](src/quantum_of_solace/pricing.py), [`resilience.py`](src/quantum_of_solace/resilience.py); [`cartel_graph.py`](src/quantum_of_solace/cartel_graph.py), [`shapley.py`](src/quantum_of_solace/shapley.py); [`mission.py`](src/quantum_of_solace/mission.py).
+
 ## The film, as a specification
 
 *Quantum of Solace* is the Bond film in which the villain never points a
