@@ -1,5 +1,7 @@
 # QUANTUM — Quantum of Solace (2008)
 
+[Package maintenance](package-maintenance.md) identifies the dependency and citation records.
+
 Agent-facing documentation hub for this PROJECT BOND film package: deterministic
 models of water-rights cartels, desert hydrology, commodity concentration,
 scarcity pricing, aqueduct interdiction and cooperative power.

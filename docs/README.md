@@ -1,5 +1,7 @@
 # docs/ — QUANTUM (Quantum of Solace, 2008)
 
+[Package maintenance](package-maintenance.md) covers dependency and release records.
+
 The agent-facing documentation hub for this BOND-suite film package. Everything
 here describes *this* package — the desert-hydrology, water-cartel, commodity
 concentration, scarcity-pricing, aqueduct-interdiction and cooperative-power

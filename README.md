@@ -1,5 +1,7 @@
 # Quantum of Solace — QUANTUM
 
+See [package maintenance](docs/package-maintenance.md) for dependency and citation records.
+
 Special-agent mission software for the 2008 film *Quantum of Solace*, built as
 one package of the **PROJECT BOND** suite (codename **QUANTUM**). It is bound
 to the suite's frozen `bond_api` mission protocol, so the fleet orchestrator
