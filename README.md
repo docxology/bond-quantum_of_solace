@@ -1,6 +1,7 @@
 # Quantum of Solace — QUANTUM
 
-See [package maintenance](docs/package-maintenance.md) for dependency and citation records.
+For the distribution version, checkout Python selection, dependency sources,
+and citation records, see [package maintenance](docs/package-maintenance.md).
 
 Special-agent mission software for the 2008 film *Quantum of Solace*, built as
 one package of the **PROJECT BOND** suite (codename **QUANTUM**). It is bound

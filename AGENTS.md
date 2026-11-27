@@ -1,5 +1,8 @@
 # QUANTUM — Agent Working Agreement
 
+The [package maintenance guide](docs/package-maintenance.md) records the
+distribution identity, Python selection, dependency provenance, and citation metadata.
+
 Build/test/verify guide for agents working inside this BOND-suite film package.
 Read [`docs/agent_instructions.md`](docs/agent_instructions.md) before modifying
 any file, and [`docs/architecture.md`](docs/architecture.md) before adding one.
